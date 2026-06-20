@@ -1,0 +1,211 @@
+.assistant {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  gap: 20px;
+  padding: 20px;
+  min-height: 100vh;
+}
+
+h1,
+h2,
+p {
+  margin: 0;
+}
+
+.app-nav {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 22px;
+  padding: 14px 18px;
+  overflow: hidden;
+}
+
+.app-nav h1 {
+  font-size: 26px;
+}
+
+nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+nav a {
+  border-bottom: 2px solid transparent;
+  border-radius: 6px;
+  color: #aebdd0;
+  font-weight: 800;
+  padding: 10px 12px;
+}
+
+nav a.active,
+nav a:hover {
+  border-bottom-color: #00f2ff;
+  color: #e1fdff;
+  background: rgba(0, 242, 255, 0.12);
+}
+
+.nav-profile {
+  display: grid;
+  justify-items: end;
+  color: #9fb0c2;
+  font-size: 12px;
+}
+
+.nav-profile strong {
+  color: #00f2ff;
+  text-transform: uppercase;
+}
+
+.chat {
+  display: grid;
+  grid-template-rows: auto 1fr auto auto;
+  min-height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 22px;
+}
+
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+header h2 {
+  margin-top: 4px;
+  font-size: clamp(30px, 4vw, 52px);
+}
+
+header p {
+  margin-top: 8px;
+  color: #9fb0c2;
+}
+
+.messages {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  overflow-y: auto;
+  padding: 22px;
+}
+
+.empty {
+  border: 1px dashed rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  color: #aebdd0;
+  padding: 22px;
+}
+
+.bubble {
+  justify-self: start;
+  max-width: 720px;
+  border: 1px solid rgba(0, 242, 255, 0.2);
+  border-radius: 8px;
+  background: rgba(0, 242, 255, 0.09);
+  padding: 14px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.18);
+}
+
+.bubble.user {
+  justify-self: end;
+  border-color: rgba(208, 188, 255, 0.25);
+  background: rgba(208, 188, 255, 0.1);
+}
+
+.bubble span {
+  color: #00f2ff;
+  display: block;
+  font-size: 12px;
+  font-weight: 800;
+  margin-bottom: 6px;
+  text-transform: uppercase;
+}
+
+.bubble p {
+  color: #eef9ff;
+  line-height: 1.5;
+}
+
+form {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 18px;
+}
+
+input {
+  color: #eef9ff;
+  background: #080c13;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  outline: none;
+  padding: 13px 14px;
+}
+
+.status {
+  padding: 0 18px 18px;
+}
+
+.confirm-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 20;
+  display: grid;
+  place-items: center;
+  background: rgba(4, 7, 12, 0.72);
+  backdrop-filter: blur(10px);
+  padding: 20px;
+}
+
+.confirm-dialog {
+  width: min(100%, 460px);
+  padding: 24px;
+}
+
+.confirm-dialog h2 {
+  margin: 8px 0 10px;
+  color: #e1fdff;
+}
+
+.confirm-dialog p {
+  color: #b8c4d3;
+  line-height: 1.5;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 880px) {
+  .assistant,
+  form {
+    grid-template-columns: 1fr;
+  }
+
+  .app-nav {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  nav {
+    justify-content: start;
+  }
+
+  .nav-profile {
+    justify-items: start;
+  }
+}

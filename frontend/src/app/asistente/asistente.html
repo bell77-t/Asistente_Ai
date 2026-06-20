@@ -1,0 +1,70 @@
+<main class="assistant page-shell">
+  <header class="app-nav panel">
+    <h1 class="brand-title">LevelUp AI</h1>
+    <nav>
+      <a routerLink="/dashboard">Dashboard</a>
+      <a routerLink="/asistente" class="active">AI Assistant</a>
+      <a routerLink="/register">Perfil</a>
+    </nav>
+    <div class="nav-profile">
+      <span>{{ profile?.callsign || 'Commander' }}</span>
+      <strong>{{ profile?.level || 'principiante' }}</strong>
+    </div>
+  </header>
+
+  <section class="chat panel">
+    <header>
+      <div>
+        <span class="eyebrow">Neural link</span>
+        <h2 class="brand-title">Asistente</h2>
+        <p>
+          Respuestas adaptadas a {{ profile?.level || 'principiante' }},
+          {{ profile?.platform || 'PC' }} y gustos {{ profile?.genres?.join(', ') || 'FPS, RPG' }}.
+        </p>
+      </div>
+      <div class="header-actions">
+        <button class="secondary-button" type="button" (click)="loadMessages()">Sincronizar</button>
+        <button class="icon-button" type="button" (click)="requestClearMessages()">Limpiar</button>
+      </div>
+    </header>
+
+    <div class="messages">
+      @if (!messages.length) {
+        <div class="empty">
+          <strong>Sin mensajes guardados</strong>
+          <p>Escribe un comando para probar el guardado en Firestore.</p>
+        </div>
+      }
+      @for (message of messages; track message.id) {
+        <article class="bubble" [class.user]="message.role === 'user'">
+          <span>{{ message.role === 'user' ? 'Commander' : 'Neural Link' }}</span>
+          <p>{{ message.content }}</p>
+        </article>
+      }
+    </div>
+
+    <form [formGroup]="form" (ngSubmit)="sendMessage()">
+      <input formControlName="content" placeholder="Type tactical command..." />
+      <button class="primary-button" type="submit" [disabled]="loading">
+        {{ loading ? 'Guardando...' : 'Execute' }}
+      </button>
+    </form>
+    @if (status) {
+      <p class="status error">{{ status }}</p>
+    }
+  </section>
+
+  @if (confirmClearOpen) {
+    <section class="confirm-backdrop">
+      <div class="confirm-dialog panel">
+        <span class="eyebrow">Confirmar accion</span>
+        <h2>Limpiar historial</h2>
+        <p>Se eliminaran los mensajes guardados del chat en Firestore. Esta accion no afecta tu perfil ni recomendaciones.</p>
+        <div class="confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelClearMessages()">Cancelar</button>
+          <button class="primary-button" type="button" (click)="clearMessages()">Confirmar limpieza</button>
+        </div>
+      </div>
+    </section>
+  }
+</main>

@@ -1,0 +1,114 @@
+<main class="dashboard page-shell">
+  <header class="app-nav panel">
+    <h1 class="brand-title">LevelUp AI</h1>
+    <nav>
+      <a routerLink="/dashboard" class="active">Dashboard</a>
+      <a routerLink="/asistente">AI Assistant</a>
+      <a routerLink="/register">Perfil</a>
+      <a routerLink="/login">Salir</a>
+    </nav>
+    <div class="nav-profile">
+      <span>{{ profile?.callsign || 'Commander' }}</span>
+      <strong>{{ profile?.level || 'principiante' }}</strong>
+    </div>
+  </header>
+
+  <section class="content">
+    <header class="topbar panel">
+      <div>
+        <span class="eyebrow">Tactical command interface</span>
+        <h2 class="brand-title">Welcome back, Commander</h2>
+        <p>
+          Perfil activo: {{ profile?.level || 'principiante' }} -
+          {{ profile?.platform || 'PC' }} -
+          {{ profile?.genres?.join(', ') || 'FPS, RPG' }}.
+        </p>
+      </div>
+      <button class="secondary-button" type="button" (click)="refreshDashboard()">Actualizar</button>
+    </header>
+
+    <section class="grid">
+      <article class="panel metric">
+        <span class="eyebrow">Perfil</span>
+        <strong>{{ profile?.level || 'OK' }}</strong>
+        <p>{{ profile?.platform || 'PC' }} - {{ profile?.genres?.join(', ') || 'FPS, RPG' }}</p>
+      </article>
+      <article class="panel metric">
+        <span class="eyebrow">System status</span>
+        <strong>{{ loading ? 'SYNC' : (stats?.syncStatus ?? 'OK') }}</strong>
+        <p>Firestore via backend</p>
+      </article>
+      <article class="panel metric">
+        <span class="eyebrow">Neural module</span>
+        <strong>{{ stats?.messagesTotal ?? 0 }}</strong>
+        <p>Mensajes persistentes</p>
+      </article>
+    </section>
+
+    <section class="intel-grid">
+      <article class="panel hardware-card">
+        <span class="eyebrow">Hardware vitals</span>
+        <h3>Estado del sistema</h3>
+        <div class="vital">
+          <span>CPU TEMP</span>
+          <strong>{{ hardware?.cpuTemp ?? 0 }} C</strong>
+        </div>
+        <div class="bar"><i [style.width.%]="hardware?.cpuTemp ?? 0"></i></div>
+        <div class="vital">
+          <span>GPU LOAD</span>
+          <strong>{{ hardware?.gpuLoad ?? 0 }}%</strong>
+        </div>
+        <div class="bar"><i [style.width.%]="hardware?.gpuLoad ?? 0"></i></div>
+        <div class="vital">
+          <span>MEMORY</span>
+          <strong>{{ hardware?.memoryLoad ?? 0 }}%</strong>
+        </div>
+        <div class="bar"><i [style.width.%]="hardware?.memoryLoad ?? 0"></i></div>
+        <p class="status">{{ hardware?.driver ?? 'Driver pendiente' }} {{ hardware?.updateAvailable ? '- update disponible' : '' }}</p>
+      </article>
+
+      <article class="panel recommendations-card">
+        <span class="eyebrow">Juegos recomendados segun perfil</span>
+        <h3>AI picks</h3>
+        <div class="recommendations">
+          @for (game of recommendations; track game.id) {
+            <div class="recommendation">
+              <img [src]="game.imageUrl" [alt]="game.title" />
+              <span class="hud-chip">{{ game.tag }}</span>
+              <strong>{{ game.title }}</strong>
+              <p>{{ game.note }}</p>
+            </div>
+          }
+        </div>
+      </article>
+    </section>
+
+    <section class="intel-grid">
+      <article class="panel recommendations-card">
+        <span class="eyebrow">Tendencias populares</span>
+        <h3>Trending now</h3>
+        <div class="recommendations">
+          @for (trend of trends; track trend.id) {
+            <div class="recommendation">
+              <img [src]="trend.imageUrl" [alt]="trend.title" />
+              <span class="hud-chip">{{ trend.genre }}</span>
+              <strong>{{ trend.title }}</strong>
+              <p>{{ trend.signal }}</p>
+            </div>
+          }
+        </div>
+      </article>
+
+      <article class="panel tips-card">
+        <span class="eyebrow">Noticias / tips gaming</span>
+        <h3>Consejos para tu nivel</h3>
+        <div class="tips-list">
+          @for (tip of tips; track tip) {
+            <p>{{ tip }}</p>
+          }
+        </div>
+        <a class="quick-chat" routerLink="/asistente">Abrir chat de IA</a>
+      </article>
+    </section>
+  </section>
+</main>

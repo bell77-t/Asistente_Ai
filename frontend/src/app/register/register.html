@@ -1,0 +1,105 @@
+<main class="register-page page-shell">
+  <div class="scanline"></div>
+  <header class="profile-nav panel">
+    <h1 class="brand-title">LevelUp AI</h1>
+    <nav>
+      <a routerLink="/dashboard">Dashboard</a>
+      <a routerLink="/asistente">AI Assistant</a>
+      <a routerLink="/register" class="active">Perfil</a>
+    </nav>
+  </header>
+  <section class="panel register-card">
+    <div class="register-header">
+      <span class="eyebrow">Perfil de usuario</span>
+      <h1 class="brand-title">{{ hasProfile ? 'Tu perfil gamer' : 'New Recruit Detected' }}</h1>
+      <p class="lead">Esta informacion personaliza el dashboard y las respuestas del chat.</p>
+    </div>
+
+    @if (hasProfile && !editing) {
+      <div class="profile-summary">
+        <div>
+          <span>Callsign</span>
+          <strong>{{ form.controls.callsign.value || 'Commander' }}</strong>
+        </div>
+        <div>
+          <span>Nivel</span>
+          <strong>{{ form.controls.level.value }}</strong>
+        </div>
+        <div>
+          <span>Plataforma</span>
+          <strong>{{ form.controls.platform.value }}</strong>
+        </div>
+        <div>
+          <span>Generos</span>
+          <strong>{{ selectedGenres }}</strong>
+        </div>
+      </div>
+      <button class="primary-button" type="button" (click)="toggleEdit()">Editar informacion</button>
+    }
+
+    @if (!hasProfile || editing) {
+    <form [formGroup]="form" (ngSubmit)="requestSave()">
+      <div class="field">
+        <label for="callsign">Callsign</label>
+        <input id="callsign" formControlName="callsign" placeholder="GHOST_STRIKER" />
+      </div>
+      <div class="field">
+        <label for="email">Neural link</label>
+        <input id="email" type="email" formControlName="email" placeholder="neural@levelup.ai" />
+      </div>
+      <div class="field">
+        <label for="password">Security key</label>
+        <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
+      </div>
+      <div class="field">
+        <label for="level">Nivel de jugador</label>
+        <select id="level" formControlName="level">
+          <option value="principiante">Principiante</option>
+          <option value="medio">Medio</option>
+          <option value="pro">Pro</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="platform">Plataforma</label>
+        <select id="platform" formControlName="platform">
+          <option value="PC">PC</option>
+          <option value="consola">Consola</option>
+          <option value="movil">Movil</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Generos favoritos</label>
+        <div class="genre-grid">
+          <label><input type="checkbox" formControlName="genreFps" /> FPS</label>
+          <label><input type="checkbox" formControlName="genreRpg" /> RPG</label>
+          <label><input type="checkbox" formControlName="genreMoba" /> MOBA</label>
+          <label><input type="checkbox" formControlName="genreSports" /> Sports</label>
+          <label><input type="checkbox" formControlName="genreStrategy" /> Strategy</label>
+        </div>
+      </div>
+      <button class="primary-button" type="submit" [disabled]="loading">
+        {{ loading ? 'Guardando perfil...' : 'Guardar perfil gamer' }}
+      </button>
+    </form>
+    }
+
+    @if (message) {
+      <p class="status" [class.error]="isError" [class.ok]="!isError">{{ message }}</p>
+    }
+    <p class="status"><a routerLink="/dashboard">Volver al dashboard</a></p>
+  </section>
+
+  @if (confirmSaveOpen) {
+    <section class="confirm-backdrop">
+      <div class="confirm-dialog panel">
+        <span class="eyebrow">Confirmar cambios</span>
+        <h2>Guardar perfil gamer</h2>
+        <p>El dashboard y el chat se personalizaran con nivel {{ form.controls.level.value }}, plataforma {{ form.controls.platform.value }} y generos {{ selectedGenres }}.</p>
+        <div class="confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelSave()">Cancelar</button>
+          <button class="primary-button" type="button" (click)="submit()">Confirmar y guardar</button>
+        </div>
+      </div>
+    </section>
+  }
+</main>
