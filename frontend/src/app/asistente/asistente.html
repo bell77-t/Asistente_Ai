@@ -1,57 +1,111 @@
-<main class="assistant page-shell">
+﻿<main class="assistant page-shell">
   <header class="app-nav panel">
-    <h1 class="brand-title">LevelUp AI</h1>
+    <h1 class="brand-title">TaskFlow AI</h1>
     <nav>
       <a routerLink="/dashboard">Dashboard</a>
-      <a routerLink="/asistente" class="active">AI Assistant</a>
+      <a routerLink="/asistente" class="active">Asistente IA</a>
       <a routerLink="/register">Perfil</a>
     </nav>
     <div class="nav-profile">
-      <span>{{ profile?.callsign || 'Commander' }}</span>
+      <span>{{ profile?.callsign || 'Usuario' }}</span>
       <strong>{{ profile?.level || 'principiante' }}</strong>
     </div>
   </header>
 
-  <section class="chat panel">
-    <header>
+  <section class="chat-layout">
+    <aside class="history panel">
       <div>
-        <span class="eyebrow">Neural link</span>
-        <h2 class="brand-title">Asistente</h2>
-        <p>
-          Respuestas adaptadas a {{ profile?.level || 'principiante' }},
-          {{ profile?.platform || 'PC' }} y gustos {{ profile?.genres?.join(', ') || 'FPS, RPG' }}.
-        </p>
+        <span class="eyebrow">Historial</span>
+        <h2>Chats guardados</h2>
+        <p>{{ conversations.length }} conversaciones</p>
+        <button class="primary-button new-chat" type="button" (click)="createNewChat()" [disabled]="loading">
+          Nuevo chat
+        </button>
       </div>
-      <div class="header-actions">
-        <button class="secondary-button" type="button" (click)="loadMessages()">Sincronizar</button>
-        <button class="icon-button" type="button" (click)="requestClearMessages()">Limpiar</button>
-      </div>
-    </header>
 
-    <div class="messages">
-      @if (!messages.length) {
-        <div class="empty">
-          <strong>Sin mensajes guardados</strong>
-          <p>Escribe un comando para probar el guardado en Firestore.</p>
+      <div class="history-list">
+        @if (!conversations.length) {
+          <p class="history-empty">Crea un chat para empezar.</p>
+        }
+        @for (conversation of conversations; track conversation.id) {
+          <article
+            class="history-item"
+            [class.active]="conversation.id === selectedConversationId"
+            (click)="selectConversation(conversation.id)"
+          >
+            <div class="history-item-head">
+              <span>{{ conversation.messagesCount || 0 }} mensajes</span>
+              <div class="history-actions">
+                <button class="mini-icon" type="button" title="Actualizar chat" aria-label="Actualizar chat" (click)="refreshConversation(conversation.id, $event)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M20 6v5h-5" />
+                    <path d="M19 11a7 7 0 1 0-2.1 5" />
+                  </svg>
+                </button>
+                <button class="mini-icon danger" type="button" title="Eliminar chat" aria-label="Eliminar chat" (click)="requestClearMessages(conversation.id, $event)">
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M3 6h18" />
+                    <path d="M8 6V4h8v2" />
+                    <path d="M6 6l1 14h10l1-14" />
+                    <path d="M10 11v5" />
+                    <path d="M14 11v5" />
+                  </svg>
+                </button>
+              </div>
+            </div>
+            <strong>{{ conversation.title }}</strong>
+            <p>{{ conversation.lastMessage || 'Sin mensajes todavia' }}</p>
+          </article>
+        }
+      </div>
+    </aside>
+
+    <section class="chat panel">
+      <header>
+        <div>
+          <span class="eyebrow">Chat activo</span>
+          <h2 class="brand-title">{{ selectedConversation?.title || 'Asistente' }}</h2>
+          <p>
+            Solo responde sobre tareas: pendientes, prioridades, proyectos, listas, recordatorios, agenda y productividad.
+          </p>
         </div>
-      }
-      @for (message of messages; track message.id) {
-        <article class="bubble" [class.user]="message.role === 'user'">
-          <span>{{ message.role === 'user' ? 'Commander' : 'Neural Link' }}</span>
-          <p>{{ message.content }}</p>
-        </article>
-      }
-    </div>
+      </header>
 
-    <form [formGroup]="form" (ngSubmit)="sendMessage()">
-      <input formControlName="content" placeholder="Type tactical command..." />
-      <button class="primary-button" type="submit" [disabled]="loading">
-        {{ loading ? 'Guardando...' : 'Execute' }}
-      </button>
-    </form>
-    @if (status) {
-      <p class="status error">{{ status }}</p>
-    }
+      <div class="messages">
+        @if (!messages.length) {
+          <div class="empty">
+            <strong>Sin mensajes guardados</strong>
+            <p>Pregunta por una tarea, proyecto o pendiente para probar el guardado en Firestore.</p>
+          </div>
+        }
+        @for (message of messages; track message.id) {
+          <article class="bubble" [class.user]="message.role === 'user'">
+            <span>{{ message.role === 'user' ? 'Tu' : 'TaskFlow AI' }}</span>
+            <p>{{ message.content }}</p>
+          </article>
+        }
+        @if (loading) {
+          <article class="bubble typing">
+            <span>TaskFlow AI</span>
+            <div class="typing-dots" aria-label="La IA esta pensando">
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </article>
+        }
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="sendMessage()">
+        <input formControlName="content" placeholder="Pregunta por una tarea, proyecto, prioridad o plan..." />
+        <button class="primary-button" type="submit" [disabled]="loading">
+          {{ loading ? 'Pensando...' : 'Enviar' }}
+        </button>
+      </form>
+      @if (status) {
+        <p class="status error">{{ status }}</p>
+      }
+    </section>
   </section>
 
   @if (confirmClearOpen) {
@@ -59,7 +113,7 @@
       <div class="confirm-dialog panel">
         <span class="eyebrow">Confirmar accion</span>
         <h2>Limpiar historial</h2>
-        <p>Se eliminaran los mensajes guardados del chat en Firestore. Esta accion no afecta tu perfil ni recomendaciones.</p>
+        <p>Se eliminara este chat y sus mensajes guardados en Firestore. Esta accion no afecta tu Perfil ni recomendaciones.</p>
         <div class="confirm-actions">
           <button class="secondary-button" type="button" (click)="cancelClearMessages()">Cancelar</button>
           <button class="primary-button" type="button" (click)="clearMessages()">Confirmar limpieza</button>
@@ -68,3 +122,4 @@
     </section>
   }
 </main>
+

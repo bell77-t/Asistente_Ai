@@ -3,18 +3,64 @@
   display: grid;
   grid-template-rows: auto 1fr;
   gap: 22px;
-  place-items: center;
+  align-items: start;
   padding: 24px;
   overflow: hidden;
 }
 
 .profile-nav {
+  position: sticky;
+  top: 14px;
+  z-index: 10;
   display: grid;
   grid-template-columns: auto 1fr;
   align-items: center;
   gap: 22px;
   width: min(100%, 980px);
   padding: 14px 18px;
+}
+
+.profile-layout {
+  display: grid;
+  grid-template-columns: minmax(240px, 320px) minmax(0, 760px);
+  gap: 16px;
+  width: min(100%, 1096px);
+  margin: 0 auto;
+}
+
+.profile-side {
+  align-self: start;
+  position: sticky;
+  top: 98px;
+  padding: 24px;
+  overflow: hidden;
+}
+
+.profile-side h2 {
+  margin: 10px 0 6px;
+  color: #e1fdff;
+  font-size: 30px;
+}
+
+.profile-side p {
+  color: #9fb0c2;
+}
+
+.profile-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.profile-tags span {
+  border: 1px solid rgba(0, 242, 255, 0.22);
+  border-radius: 999px;
+  background: rgba(0, 242, 255, 0.08);
+  color: #bffcff;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
 }
 
 .profile-nav h1 {
@@ -45,7 +91,7 @@ nav a:hover {
 }
 
 .register-card {
-  width: min(100%, 760px);
+  width: 100%;
   padding: 32px;
   overflow: hidden;
 }
@@ -57,7 +103,7 @@ p {
 
 h1 {
   margin-top: 10px;
-  font-size: clamp(34px, 7vw, 54px);
+  font-size: clamp(30px, 5vw, 48px);
   line-height: 1.03;
 }
 
@@ -83,7 +129,7 @@ form {
 .profile-summary div {
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
-  background: rgba(8, 12, 19, 0.58);
+  background: rgba(8, 12, 19, 0.72);
   padding: 16px;
 }
 
@@ -117,6 +163,12 @@ form {
   color: #e1e2eb;
   cursor: pointer;
   padding: 10px;
+  transition: border-color 160ms ease, background 160ms ease;
+}
+
+.genre-grid label:has(input:checked) {
+  border-color: rgba(0, 242, 255, 0.42);
+  background: rgba(0, 242, 255, 0.12);
 }
 
 .genre-grid input {
@@ -163,8 +215,13 @@ a {
 
 @media (max-width: 760px) {
   .profile-nav,
+  .profile-layout,
   .profile-summary {
     grid-template-columns: 1fr;
+  }
+
+  .profile-side {
+    position: static;
   }
 
   nav {

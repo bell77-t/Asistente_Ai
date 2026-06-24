@@ -46,11 +46,11 @@ export class Register {
           email: profile.email,
           level: profile.level,
           platform: profile.platform,
-          genreFps: profile.genres.includes('FPS'),
-          genreRpg: profile.genres.includes('RPG'),
-          genreMoba: profile.genres.includes('MOBA'),
-          genreSports: profile.genres.includes('Sports'),
-          genreStrategy: profile.genres.includes('Strategy'),
+          genreFps: profile.genres.includes('Trabajo'),
+          genreRpg: profile.genres.includes('Estudio'),
+          genreMoba: profile.genres.includes('Personal'),
+          genreSports: profile.genres.includes('Proyectos'),
+          genreStrategy: profile.genres.includes('Hogar'),
         });
         this.cdr.detectChanges();
       },
@@ -66,12 +66,12 @@ export class Register {
     const value = this.form.getRawValue();
 
     return [
-      value.genreFps ? 'FPS' : '',
-      value.genreRpg ? 'RPG' : '',
-      value.genreMoba ? 'MOBA' : '',
-      value.genreSports ? 'Sports' : '',
-      value.genreStrategy ? 'Strategy' : '',
-    ].filter(Boolean).join(', ') || 'Sin generos';
+      value.genreFps ? 'Trabajo' : '',
+      value.genreRpg ? 'Estudio' : '',
+      value.genreMoba ? 'Personal' : '',
+      value.genreSports ? 'Proyectos' : '',
+      value.genreStrategy ? 'Hogar' : '',
+    ].filter(Boolean).join(', ') || 'Sin areas';
   }
 
   requestSave() {
@@ -106,12 +106,18 @@ export class Register {
     this.isError = false;
     this.cdr.detectChanges();
     const value = this.form.getRawValue();
-    const genres = this.selectedGenres.split(', ').filter((genre) => genre !== 'Sin generos');
+    const genres = this.selectedGenres.split(', ').filter((genre) => genre !== 'Sin areas');
 
     try {
       await this.auth.register(value.email, value.password);
     } catch {
-      this.message = 'Perfil guardado. Firebase Auth necesita la configuracion web real para crear usuario.';
+      this.loading = false;
+      this.isError = true;
+      this.message = this.auth.isFirebaseConfigured
+        ? 'No se pudo crear la cuenta. Revisa el correo o usa otra clave.'
+        : 'Falta configurar Firebase web en enviroments.ts para crear usuarios reales.';
+      this.cdr.detectChanges();
+      return;
     }
 
     this.api.updateProfile({
@@ -123,7 +129,7 @@ export class Register {
     }).subscribe({
       next: async () => {
         if (!this.message) {
-          this.message = 'Perfil actualizado en Firestore.';
+          this.message = 'Perfil de tareas actualizado en Firestore.';
         }
         this.loading = false;
         this.editing = false;

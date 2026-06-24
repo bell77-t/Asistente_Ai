@@ -1,14 +1,14 @@
-<main class="dashboard page-shell">
+﻿<main class="dashboard page-shell">
   <header class="app-nav panel">
-    <h1 class="brand-title">LevelUp AI</h1>
+    <h1 class="brand-title">TaskFlow AI</h1>
     <nav>
       <a routerLink="/dashboard" class="active">Dashboard</a>
-      <a routerLink="/asistente">AI Assistant</a>
+      <a routerLink="/asistente">Asistente IA</a>
       <a routerLink="/register">Perfil</a>
       <a routerLink="/login">Salir</a>
     </nav>
     <div class="nav-profile">
-      <span>{{ profile?.callsign || 'Commander' }}</span>
+      <span>{{ profile?.callsign || 'Usuario' }}</span>
       <strong>{{ profile?.level || 'principiante' }}</strong>
     </div>
   </header>
@@ -16,22 +16,23 @@
   <section class="content">
     <header class="topbar panel">
       <div>
-        <span class="eyebrow">Tactical command interface</span>
-        <h2 class="brand-title">Welcome back, Commander</h2>
-        <p>
-          Perfil activo: {{ profile?.level || 'principiante' }} -
-          {{ profile?.platform || 'PC' }} -
-          {{ profile?.genres?.join(', ') || 'FPS, RPG' }}.
-        </p>
+        <span class="eyebrow">Command center</span>
+        <h2 class="brand-title">Dashboard</h2>
+        <p>{{ profile?.callsign || 'Usuario' }} · {{ profile?.level || 'principiante' }} · {{ profile?.platform || 'PC' }} · {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
       </div>
-      <button class="secondary-button" type="button" (click)="refreshDashboard()">Actualizar</button>
+      <button class="icon-action" type="button" title="Actualizar dashboard" aria-label="Actualizar dashboard" (click)="refreshDashboard()">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M20 6v5h-5" />
+          <path d="M19 11a7 7 0 1 0-2.1 5" />
+        </svg>
+      </button>
     </header>
 
-    <section class="grid">
+    <section class="metric-grid">
       <article class="panel metric">
         <span class="eyebrow">Perfil</span>
         <strong>{{ profile?.level || 'OK' }}</strong>
-        <p>{{ profile?.platform || 'PC' }} - {{ profile?.genres?.join(', ') || 'FPS, RPG' }}</p>
+        <p>{{ profile?.platform || 'PC' }} - {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
       </article>
       <article class="panel metric">
         <span class="eyebrow">System status</span>
@@ -39,13 +40,13 @@
         <p>Firestore via backend</p>
       </article>
       <article class="panel metric">
-        <span class="eyebrow">Neural module</span>
+        <span class="eyebrow">Modulo IA</span>
         <strong>{{ stats?.messagesTotal ?? 0 }}</strong>
         <p>Mensajes persistentes</p>
       </article>
     </section>
 
-    <section class="intel-grid">
+    <section class="dashboard-grid">
       <article class="panel hardware-card">
         <span class="eyebrow">Hardware vitals</span>
         <h3>Estado del sistema</h3>
@@ -68,47 +69,71 @@
       </article>
 
       <article class="panel recommendations-card">
-        <span class="eyebrow">Juegos recomendados segun perfil</span>
-        <h3>AI picks</h3>
+        <span class="eyebrow">Plantillas recomendadas</span>
+        <h3>Catalogo de tareas</h3>
         <div class="recommendations">
           @for (game of recommendations; track game.id) {
-            <div class="recommendation">
+            <button class="recommendation" type="button" (click)="openRecommendation(game)">
               <img [src]="game.imageUrl" [alt]="game.title" />
               <span class="hud-chip">{{ game.tag }}</span>
               <strong>{{ game.title }}</strong>
               <p>{{ game.note }}</p>
-            </div>
+            </button>
           }
         </div>
       </article>
     </section>
 
-    <section class="intel-grid">
+    <section class="dashboard-grid compact">
       <article class="panel recommendations-card">
         <span class="eyebrow">Tendencias populares</span>
-        <h3>Trending now</h3>
+        <h3>Radar tareas</h3>
         <div class="recommendations">
           @for (trend of trends; track trend.id) {
-            <div class="recommendation">
+            <button class="recommendation" type="button" (click)="openTrend(trend)">
               <img [src]="trend.imageUrl" [alt]="trend.title" />
               <span class="hud-chip">{{ trend.genre }}</span>
               <strong>{{ trend.title }}</strong>
               <p>{{ trend.signal }}</p>
-            </div>
+            </button>
           }
         </div>
       </article>
 
       <article class="panel tips-card">
-        <span class="eyebrow">Noticias / tips gaming</span>
-        <h3>Consejos para tu nivel</h3>
+        <span class="eyebrow">Noticias / tips tareas</span>
+        <h3>Consejos para organizarte mejor</h3>
         <div class="tips-list">
           @for (tip of tips; track tip) {
             <p>{{ tip }}</p>
           }
         </div>
-        <a class="quick-chat" routerLink="/asistente">Abrir chat de IA</a>
+        <a class="quick-chat" routerLink="/asistente">Abrir IA tareas</a>
       </article>
     </section>
   </section>
+
+  @if (selectedCatalogItem) {
+    <section class="review-backdrop" (click)="closeCatalogReview()">
+      <article class="review-dialog panel" (click)="$event.stopPropagation()">
+        <img [src]="selectedCatalogItem.imageUrl" [alt]="selectedCatalogItem.title" />
+        <div class="review-content">
+          <span class="eyebrow">{{ selectedCatalogItem.kind === 'recommendation' ? 'Plantilla recomendada' : 'Metodo recomendado' }}</span>
+          <h2>{{ selectedCatalogItem.title }}</h2>
+          <span class="hud-chip">{{ selectedCatalogItem.label }}</span>
+          <p>{{ selectedCatalogItem.note }}</p>
+          <p class="review-extra">
+            {{ selectedCatalogItem.kind === 'recommendation'
+              ? 'Buena plantilla para tu perfil actual. Puedes abrir el chat de IA y pedir que la convierta en una lista de tareas.'
+              : 'Metodo util para organizar pendientes. Si te interesa, pregunta al chat como aplicarlo a tus tareas actuales.' }}
+          </p>
+          <div class="review-actions">
+            <a class="quick-chat" routerLink="/asistente">Pedir ayuda a la IA</a>
+            <button class="secondary-button" type="button" (click)="closeCatalogReview()">Cerrar</button>
+          </div>
+        </div>
+      </article>
+    </section>
+  }
 </main>
+

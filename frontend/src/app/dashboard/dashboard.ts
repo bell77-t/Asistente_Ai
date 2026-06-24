@@ -3,6 +3,14 @@ import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { ApiService, DashboardStats, HardwareStatus, Recommendation, Trend, UserProfile } from '../services/api';
 
+type CatalogItem = {
+  title: string;
+  label: string;
+  note: string;
+  imageUrl: string;
+  kind: 'recommendation' | 'trend';
+};
+
 @Component({
   selector: 'app-dashboard',
   imports: [CommonModule, RouterLink],
@@ -19,6 +27,7 @@ export class Dashboard implements OnInit {
   trends: Trend[] = [];
   tips: string[] = [];
   profile: UserProfile | null = null;
+  selectedCatalogItem: CatalogItem | null = null;
   loading = false;
   message = '';
 
@@ -88,5 +97,32 @@ export class Dashboard implements OnInit {
         this.cdr.detectChanges();
       },
     });
+  }
+
+  openRecommendation(game: Recommendation) {
+    this.selectedCatalogItem = {
+      title: game.title,
+      label: game.tag,
+      note: game.note,
+      imageUrl: game.imageUrl,
+      kind: 'recommendation',
+    };
+    this.cdr.detectChanges();
+  }
+
+  openTrend(trend: Trend) {
+    this.selectedCatalogItem = {
+      title: trend.title,
+      label: trend.genre,
+      note: trend.signal,
+      imageUrl: trend.imageUrl,
+      kind: 'trend',
+    };
+    this.cdr.detectChanges();
+  }
+
+  closeCatalogReview() {
+    this.selectedCatalogItem = null;
+    this.cdr.detectChanges();
   }
 }

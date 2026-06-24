@@ -2,7 +2,6 @@ import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../services/auth';
-import { ApiService } from '../services/api';
 
 @Component({
   selector: 'app-login',
@@ -13,7 +12,6 @@ import { ApiService } from '../services/api';
 export class Login {
   private readonly fb = inject(FormBuilder);
   private readonly authService = inject(AuthService);
-  private readonly api = inject(ApiService);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -40,19 +38,11 @@ export class Login {
       await this.authService.login(this.form.controls.email.value, this.form.controls.password.value);
       await this.router.navigateByUrl('/dashboard');
     } catch {
-      this.api.createSession(this.form.controls.email.value).subscribe({
-        next: async () => {
-          this.message = 'Sesion visual guardada. Completa Firebase Auth para login real.';
-          this.loading = false;
-          this.cdr.detectChanges();
-          await this.router.navigateByUrl('/dashboard');
-        },
-        error: () => {
-          this.loading = false;
-          this.message = 'No se pudo autenticar ni guardar la sesion. Enciende el backend.';
-          this.cdr.detectChanges();
-        },
-      });
+      this.loading = false;
+      this.message = this.authService.isFirebaseConfigured
+        ? 'No se pudo iniciar sesion. Revisa correo y clave.'
+        : 'Falta configurar Firebase web en enviroments.ts para activar el login real.';
+      this.cdr.detectChanges();
       return;
     }
 

@@ -1,36 +1,48 @@
-<main class="register-page page-shell">
+﻿<main class="register-page page-shell">
   <div class="scanline"></div>
   <header class="profile-nav panel">
-    <h1 class="brand-title">LevelUp AI</h1>
+    <h1 class="brand-title">TaskFlow AI</h1>
     <nav>
       <a routerLink="/dashboard">Dashboard</a>
-      <a routerLink="/asistente">AI Assistant</a>
+      <a routerLink="/asistente">Asistente IA</a>
       <a routerLink="/register" class="active">Perfil</a>
     </nav>
   </header>
+  <section class="profile-layout">
+    <aside class="panel profile-side">
+      <span class="eyebrow">Perfil de organizacion</span>
+      <h2>{{ form.controls.callsign.value || 'Usuario' }}</h2>
+      <p>{{ form.controls.level.value }} · {{ form.controls.platform.value }}</p>
+      <div class="profile-tags">
+        @for (genre of selectedGenres.split(', '); track genre) {
+          <span>{{ genre }}</span>
+        }
+      </div>
+    </aside>
+
   <section class="panel register-card">
     <div class="register-header">
       <span class="eyebrow">Perfil de usuario</span>
-      <h1 class="brand-title">{{ hasProfile ? 'Tu perfil gamer' : 'New Recruit Detected' }}</h1>
-      <p class="lead">Esta informacion personaliza el dashboard y las respuestas del chat.</p>
+      <h1 class="brand-title">{{ hasProfile ? 'Tu perfil de tareas' : 'Crea tu cuenta' }}</h1>
+      <p class="lead">Ajusta tu nivel, herramienta y areas de enfoque para personalizar el dashboard y el chat de IA.</p>
     </div>
 
     @if (hasProfile && !editing) {
       <div class="profile-summary">
         <div>
-          <span>Callsign</span>
-          <strong>{{ form.controls.callsign.value || 'Commander' }}</strong>
+          <span>Nombre</span>
+          <strong>{{ form.controls.callsign.value || 'Usuario' }}</strong>
         </div>
         <div>
           <span>Nivel</span>
           <strong>{{ form.controls.level.value }}</strong>
         </div>
         <div>
-          <span>Plataforma</span>
+          <span>Herramienta principal</span>
           <strong>{{ form.controls.platform.value }}</strong>
         </div>
         <div>
-          <span>Generos</span>
+          <span>areas</span>
           <strong>{{ selectedGenres }}</strong>
         </div>
       </div>
@@ -40,19 +52,19 @@
     @if (!hasProfile || editing) {
     <form [formGroup]="form" (ngSubmit)="requestSave()">
       <div class="field">
-        <label for="callsign">Callsign</label>
-        <input id="callsign" formControlName="callsign" placeholder="GHOST_STRIKER" />
+        <label for="callsign">Nombre</label>
+        <input id="callsign" formControlName="callsign" placeholder="Alex" />
       </div>
       <div class="field">
-        <label for="email">Neural link</label>
-        <input id="email" type="email" formControlName="email" placeholder="neural@levelup.ai" />
+        <label for="email">Correo</label>
+        <input id="email" type="email" formControlName="email" placeholder="correo@ejemplo.com" />
       </div>
       <div class="field">
-        <label for="password">Security key</label>
+        <label for="password">Clave</label>
         <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
       </div>
       <div class="field">
-        <label for="level">Nivel de jugador</label>
+        <label for="level">Nivel de organizacion</label>
         <select id="level" formControlName="level">
           <option value="principiante">Principiante</option>
           <option value="medio">Medio</option>
@@ -60,7 +72,7 @@
         </select>
       </div>
       <div class="field">
-        <label for="platform">Plataforma</label>
+        <label for="platform">Herramienta principal</label>
         <select id="platform" formControlName="platform">
           <option value="PC">PC</option>
           <option value="consola">Consola</option>
@@ -68,17 +80,17 @@
         </select>
       </div>
       <div class="field">
-        <label>Generos favoritos</label>
+        <label>Areas favoritas</label>
         <div class="genre-grid">
-          <label><input type="checkbox" formControlName="genreFps" /> FPS</label>
-          <label><input type="checkbox" formControlName="genreRpg" /> RPG</label>
-          <label><input type="checkbox" formControlName="genreMoba" /> MOBA</label>
-          <label><input type="checkbox" formControlName="genreSports" /> Sports</label>
-          <label><input type="checkbox" formControlName="genreStrategy" /> Strategy</label>
+          <label><input type="checkbox" formControlName="genreFps" /> Trabajo</label>
+          <label><input type="checkbox" formControlName="genreRpg" /> Estudio</label>
+          <label><input type="checkbox" formControlName="genreMoba" /> Personal</label>
+          <label><input type="checkbox" formControlName="genreSports" /> Proyectos</label>
+          <label><input type="checkbox" formControlName="genreStrategy" /> Hogar</label>
         </div>
       </div>
       <button class="primary-button" type="submit" [disabled]="loading">
-        {{ loading ? 'Guardando perfil...' : 'Guardar perfil gamer' }}
+        {{ loading ? 'Guardando Perfil...' : 'Guardar Perfil de tareas' }}
       </button>
     </form>
     }
@@ -88,13 +100,14 @@
     }
     <p class="status"><a routerLink="/dashboard">Volver al dashboard</a></p>
   </section>
+  </section>
 
   @if (confirmSaveOpen) {
     <section class="confirm-backdrop">
       <div class="confirm-dialog panel">
         <span class="eyebrow">Confirmar cambios</span>
-        <h2>Guardar perfil gamer</h2>
-        <p>El dashboard y el chat se personalizaran con nivel {{ form.controls.level.value }}, plataforma {{ form.controls.platform.value }} y generos {{ selectedGenres }}.</p>
+        <h2>Guardar Perfil de tareas</h2>
+        <p>El dashboard y el chat se personalizaran con nivel {{ form.controls.level.value }}, plataforma {{ form.controls.platform.value }} y areas {{ selectedGenres }}.</p>
         <div class="confirm-actions">
           <button class="secondary-button" type="button" (click)="cancelSave()">Cancelar</button>
           <button class="primary-button" type="button" (click)="submit()">Confirmar y guardar</button>
@@ -103,3 +116,4 @@
     </section>
   }
 </main>
+

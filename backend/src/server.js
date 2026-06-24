@@ -2,95 +2,56 @@ require('dotenv').config();
 
 const cors = require('cors');
 const express = require('express');
+const OpenAI = require('openai');
 const { db } = require('./firebase');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const configuredOpenAiKey = process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_')
+  ? process.env.OPENAI_API_KEY
+  : '';
+const looksLikeOpenAiKey = configuredOpenAiKey.startsWith('sk-');
+const googleApiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY || (!looksLikeOpenAiKey ? configuredOpenAiKey : '');
+const aiProvider = (process.env.AI_PROVIDER || (looksLikeOpenAiKey ? 'openai' : 'gemini')).toLowerCase();
+const openai = configuredOpenAiKey && aiProvider === 'openai'
+  ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  : null;
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
 
 const gameCatalog = [
-  {
-    id: 'valorant',
-    title: 'Valorant',
-    genres: ['FPS'],
-    platforms: ['PC'],
-    level: ['medio', 'pro'],
-    tag: 'Aim Focus',
-    note: 'Ideal si buscas mejorar precision, utilidad por rondas y comunicacion tactica.',
-  },
-  {
-    id: 'elden-ring',
-    title: 'Elden Ring',
-    genres: ['RPG'],
-    platforms: ['PC', 'consola'],
-    level: ['medio', 'pro'],
-    tag: 'Build Craft',
-    note: 'Perfecto para progresion, exploracion y dominar mecanicas de combate.',
-  },
-  {
-    id: 'league-of-legends',
-    title: 'League of Legends',
-    genres: ['MOBA'],
-    platforms: ['PC'],
-    level: ['principiante', 'medio', 'pro'],
-    tag: 'Meta Pick',
-    note: 'Buena opcion para estrategia, roles claros y aprendizaje por partidas.',
-  },
-  {
-    id: 'genshin-impact',
-    title: 'Genshin Impact',
-    genres: ['RPG'],
-    platforms: ['PC', 'consola', 'movil'],
-    level: ['principiante', 'medio'],
-    tag: 'Casual RPG',
-    note: 'Recomendado para exploracion, coleccion y progreso diario flexible.',
-  },
-  {
-    id: 'call-of-duty-mobile',
-    title: 'Call of Duty Mobile',
-    genres: ['FPS'],
-    platforms: ['movil'],
-    level: ['principiante', 'medio', 'pro'],
-    tag: 'Mobile FPS',
-    note: 'Accion rapida con progresion clara y modos competitivos accesibles.',
-  },
-  {
-    id: 'baldurs-gate-3',
-    title: 'Baldur’s Gate 3',
-    genres: ['RPG'],
-    platforms: ['PC', 'consola'],
-    level: ['principiante', 'medio', 'pro'],
-    tag: 'Story Rich',
-    note: 'Gran eleccion si te gusta tomar decisiones, lore y builds de personajes.',
-  },
+  { id: 'daily-planning', title: 'Plan diario', genres: ['Estudio', 'Trabajo'], platforms: ['PC'], level: ['medio', 'pro'], tag: 'Prioridad', note: 'Organiza tus tareas del dia por prioridad, tiempo estimado y estado de avance.' },
+  { id: 'study-blocks', title: 'Bloques de estudio', genres: ['Estudio'], platforms: ['PC', 'consola'], level: ['medio', 'pro'], tag: 'Enfoque', note: 'Divide un objetivo academico en sesiones cortas con entregables claros.' },
+  { id: 'project-tracker', title: 'Seguimiento de proyecto', genres: ['Trabajo'], platforms: ['PC'], level: ['principiante', 'medio', 'pro'], tag: 'Proyecto', note: 'Convierte un proyecto en tareas, responsables, fechas y proximas acciones.' },
+  { id: 'personal-routine', title: 'Rutina personal', genres: ['Personal'], platforms: ['PC', 'consola', 'movil'], level: ['principiante', 'medio'], tag: 'Habitos', note: 'Crea recordatorios y pasos simples para mantener habitos semanales.' },
+  { id: 'quick-capture', title: 'Captura rapida', genres: ['Personal'], platforms: ['movil'], level: ['principiante', 'medio', 'pro'], tag: 'Inbox', note: 'Registra ideas, pendientes o solicitudes rapidamente para ordenarlas despues.' },
+  { id: 'weekly-review', title: 'Revision semanal', genres: ['Trabajo', 'Estudio', 'Personal'], platforms: ['PC', 'consola'], level: ['principiante', 'medio', 'pro'], tag: 'Revision', note: 'Revisa pendientes, bloqueos y logros para planear la siguiente semana.' },
 ];
-
 const trends = [
-  { id: 'marathon', title: 'Marathon', genre: 'FPS', signal: 'Extraccion tactica en tendencia' },
-  { id: 'hades-2', title: 'Hades II', genre: 'Roguelike', signal: 'Runs cortas y alto replay value' },
-  { id: 'monster-hunter-wilds', title: 'Monster Hunter Wilds', genre: 'Action RPG', signal: 'Cooperativo y progresion de equipo' },
-  { id: 'fortnite', title: 'Fortnite', genre: 'Battle Royale', signal: 'Eventos y temporadas activas' },
+  { id: 'pomodoro', title: 'Pomodoro', genre: 'Productividad', signal: 'Trabajo en bloques de foco y descanso' },
+  { id: 'kanban', title: 'Kanban personal', genre: 'Organizacion', signal: 'Pendiente, en progreso y completado' },
+  { id: 'time-blocking', title: 'Time blocking', genre: 'Agenda', signal: 'Reserva tiempo real para cada prioridad' },
+  { id: 'eisenhower', title: 'Matriz Eisenhower', genre: 'Priorizacion', signal: 'Distingue lo urgente de lo importante' },
 ];
-
 const gamingTips = {
   principiante: [
-    'Juega primero 20 minutos en modo entrenamiento para aprender controles antes de ranked.',
-    'Elige un solo rol o personaje por sesion para crear memoria muscular.',
+    'Escribe cada tarea con un verbo claro: revisar, entregar, llamar, estudiar o preparar.',
+    'Empieza con tres pendientes importantes en lugar de llenar la lista sin prioridad.',
   ],
   medio: [
-    'Revisa una repeticion corta y apunta un error repetido antes de volver a jugar.',
-    'Ajusta sensibilidad o keybinds de uno en uno para saber que cambio ayuda.',
+    'Agrupa tareas por contexto: estudio, trabajo, casa o llamadas para reducir cambios de foco.',
+    'Asigna una fecha y un siguiente paso a cada tarea que dure mas de 15 minutos.',
   ],
   pro: [
-    'Define objetivos por bloque: aim, macro, economia o toma de decisiones, no todo a la vez.',
-    'Analiza patrones del rival y prepara una respuesta antes de que empiece la siguiente ronda.',
+    'Revisa bloqueos al final del dia y decide si delegar, dividir o reprogramar.',
+    'Mide progreso por entregables terminados, no por cantidad de tareas abiertas.',
   ],
 };
-
 const extraGameCatalog = [
-  { id: 'apex-legends', title: 'Apex Legends', genres: ['FPS'], platforms: ['PC', 'consola'], level: ['medio', 'pro'], tag: 'Squad Play', note: 'Buen fit si te gusta movimiento rapido, roles y comunicacion.', accent: '#ff7a1a' },
-  { id: 'minecraft', title: 'Minecraft', genres: ['Sandbox', 'Strategy'], platforms: ['PC', 'consola', 'movil'], level: ['principiante', 'medio', 'pro'], tag: 'Creative Loop', note: 'Ideal para creatividad, supervivencia y proyectos cooperativos.', accent: '#62b84e' },
-  { id: 'rocket-league', title: 'Rocket League', genres: ['Sports'], platforms: ['PC', 'consola'], level: ['principiante', 'medio', 'pro'], tag: 'Mechanical Skill', note: 'Perfecto para sesiones cortas con mejora mecanica constante.', accent: '#2da9ff' },
-  { id: 'clash-royale', title: 'Clash Royale', genres: ['Strategy'], platforms: ['movil'], level: ['principiante', 'medio', 'pro'], tag: 'Mobile Strategy', note: 'Recomendado para estrategia rapida y control de recursos.', accent: '#3f7cff' },
+  { id: 'meeting-notes', title: 'Notas de reunion', genres: ['Trabajo'], platforms: ['PC', 'movil'], level: ['medio', 'pro'], tag: 'Resumen', note: 'Transforma acuerdos de reunion en tareas accionables.', accent: '#ff7a1a' },
+  { id: 'exam-plan', title: 'Plan de examen', genres: ['Estudio'], platforms: ['PC', 'consola', 'movil'], level: ['principiante', 'medio', 'pro'], tag: 'Estudio', note: 'Organiza temas, fechas y sesiones de repaso.', accent: '#62b84e' },
+  { id: 'home-admin', title: 'Gestion del hogar', genres: ['Personal'], platforms: ['PC', 'consola', 'movil'], level: ['principiante', 'medio', 'pro'], tag: 'Casa', note: 'Lista compras, pagos, citas y mantenimiento domestico.', accent: '#2da9ff' },
+  { id: 'client-request', title: 'Solicitud de cliente', genres: ['Trabajo'], platforms: ['movil', 'PC'], level: ['principiante', 'medio', 'pro'], tag: 'Cliente', note: 'Convierte solicitudes en pasos verificables.', accent: '#3f7cff' },
 ];
 
 const fullGameCatalog = [...gameCatalog, ...extraGameCatalog];
@@ -114,20 +75,37 @@ const coverAccents = {
 function normalizeProfile(profile = {}) {
   const level = (profile.level || profile.rank || 'principiante').toString().toLowerCase();
   const normalizedLevel = level === 'elite' ? 'pro' : level === 'beginner' ? 'principiante' : level === 'intermediate' ? 'medio' : level;
-  const genres = Array.isArray(profile.genres) && profile.genres.length ? profile.genres : ['FPS', 'RPG'];
+  const genres = Array.isArray(profile.genres) && profile.genres.length ? profile.genres : ['Trabajo', 'Estudio'];
 
   return {
-    callsign: profile.callsign || 'Commander',
-    email: profile.email || 'player@levelup.ai',
+    callsign: profile.callsign || 'Usuario',
+    email: profile.email || 'usuario@taskflow.ai',
     level: ['principiante', 'medio', 'pro'].includes(normalizedLevel) ? normalizedLevel : 'principiante',
     genres,
     platform: profile.platform || 'PC',
   };
 }
 
-async function getActiveProfile() {
-  const snapshot = await db.collection('profiles').orderBy('createdAt', 'desc').limit(1).get();
-  const doc = snapshot.docs[0];
+function getUserId(req) {
+  return req.header('x-user-id') || 'anonymous';
+}
+
+function sortByTimestampDesc(items, field = 'createdAt') {
+  return items.sort((a, b) => timestampValue(b[field]) - timestampValue(a[field]));
+}
+
+async function getUserDocs(collectionName, userId) {
+  const snapshot = await db.collection(collectionName).where('userId', '==', userId).get();
+
+  return snapshot.docs.map((doc) => ({
+    id: doc.id,
+    ...doc.data(),
+  }));
+}
+
+async function getActiveProfile(userId = 'anonymous') {
+  const profiles = sortByTimestampDesc(await getUserDocs('profiles', userId));
+  const doc = profiles[0];
 
   if (!doc) {
     return normalizeProfile();
@@ -135,7 +113,7 @@ async function getActiveProfile() {
 
   return {
     id: doc.id,
-    ...normalizeProfile(doc.data()),
+    ...normalizeProfile(doc),
   };
 }
 
@@ -180,7 +158,7 @@ function renderCover(title, subtitle, accent = '#00f2ff') {
     <path d="M42 58h120M42 58v120M678 362H558M678 362V242" stroke="${accent}" stroke-width="5" opacity="0.85"/>
     <text x="46" y="232" fill="#e1fdff" font-family="Arial, sans-serif" font-size="48" font-weight="800">${safeTitle}</text>
     <text x="50" y="286" fill="#b9cacb" font-family="Arial, sans-serif" font-size="24" font-weight="700">${safeSubtitle}</text>
-    <text x="50" y="348" fill="${accent}" font-family="Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="4">LEVELUP AI CATALOG</text>
+    <text x="50" y="348" fill="${accent}" font-family="Arial, sans-serif" font-size="18" font-weight="800" letter-spacing="4">TASKFLOW AI</text>
   </svg>`;
 }
 
@@ -197,24 +175,153 @@ function buildAssistantResponse(content, profile, contextMessages) {
   const levelHint = {
     principiante: 'Te lo explico simple y paso a paso.',
     medio: 'Te doy una respuesta practica con prioridades claras.',
-    pro: 'Voy directo a optimizacion, toma de decisiones y eficiencia.',
+    pro: 'Voy directo a optimizacion, seguimiento y ejecucion.',
   }[normalized.level];
 
-  if (lower.includes('recomienda') || lower.includes('juego') || lower.includes('gust')) {
-    const picks = recommendationsForProfile(normalized).map((game) => game.title).join(', ');
-    return `${contextHint}${levelHint} Por tu perfil (${normalized.level}, ${normalized.platform}, ${normalized.genres.join('/')}) te recomiendo: ${picks}. Si quieres, dime si prefieres competitivo, historia o casual y ajusto la lista.`;
+  if (lower.includes('prioridad') || lower.includes('priorizar') || lower.includes('urgente')) {
+    return `${contextHint}${levelHint} Clasifica tus tareas en urgente/importante, importante/no urgente, urgente/no importante y descartable. Luego elige maximo tres prioridades para hoy.`;
   }
 
-  if (lower.includes('lore') || lower.includes('historia')) {
-    return `${contextHint}${levelHint} Para lore, separa la historia en: facciones, conflicto principal y motivacion del personaje. Dime el juego especifico y te hago un resumen sin spoilers o con spoilers, como prefieras.`;
+  if (lower.includes('plan') || lower.includes('organiza') || lower.includes('agenda')) {
+    return `${contextHint}${levelHint} Propongo este flujo: 1) lista todas las tareas, 2) define fecha limite, 3) estima duracion, 4) separa en bloques de trabajo, 5) revisa avances al final del dia.`;
   }
 
-  if (lower.includes('mecanica') || lower.includes('build') || lower.includes('guia') || lower.includes('tip')) {
-    const tip = tipsForProfile(normalized)[0];
-    return `${contextHint}${levelHint} Tip principal: ${tip} Para una guia mas precisa necesito el juego, tu rol/personaje y que parte se te complica.`;
+  if (lower.includes('resumen') || lower.includes('reunion') || lower.includes('solicitud')) {
+    return `${contextHint}${levelHint} Extrae acuerdos, responsables, fechas y siguientes pasos. Si me pasas el texto, lo convierto en una lista de tareas accionables.`;
   }
 
-  return `${contextHint}${levelHint} Puedo ayudarte con guias, tips, lore, mecanicas y recomendaciones. Segun tu perfil (${normalized.genres.join('/')} en ${normalized.platform}), empezaria por definir objetivo: mejorar rendimiento, elegir juego nuevo o entender una mecanica concreta.`;
+  return `${contextHint}${levelHint} Puedo ayudarte a crear tareas, priorizarlas, dividir proyectos, resumir solicitudes, planear una agenda y dar seguimiento. Dime que pendiente tienes, fecha limite y nivel de prioridad.`;
+}
+const taskKeywords = [
+  'tarea', 'tareas', 'pendiente', 'pendientes', 'actividad', 'actividades', 'recordatorio', 'recordatorios',
+  'organizar', 'organizacion', 'planear', 'planificacion', 'agenda', 'calendario', 'prioridad', 'prioridades',
+  'proyecto', 'proyectos', 'entrega', 'entregable', 'fecha', 'plazo', 'deadline', 'seguimiento', 'avance',
+  'productividad', 'pomodoro', 'kanban', 'eisenhower', 'time blocking', 'bloque', 'bloques', 'estudio',
+  'trabajo', 'reunion', 'reuniones', 'resumen', 'lista', 'checklist', 'objetivo', 'objetivos', 'habito', 'habitos',
+  'delegar', 'programar', 'reprogramar', 'completar', 'completado', 'hacer', 'plan', 'rutina', 'solicitud',
+];
+
+const greetingKeywords = ['hola', 'buenas', 'hey', 'saludos'];
+
+function isTaskRelated(content) {
+  const normalized = content.toLowerCase();
+
+  if (taskKeywords.some((keyword) => normalized.includes(keyword))) {
+    return true;
+  }
+
+  return normalized.length <= 30 && greetingKeywords.some((keyword) => normalized.includes(keyword));
+}
+
+function buildTaskOnlyRejection() {
+  return 'Solo puedo ayudarte con gestion de tareas: organizar pendientes, planear actividades, priorizar, crear listas, hacer seguimiento, resumir solicitudes o mejorar productividad. Reformula tu pregunta hacia tareas y te ayudo.';
+}
+function buildSystemPrompt(profile) {
+  const normalized = normalizeProfile(profile);
+
+  return [
+    'Eres TaskFlow AI, un asistente de tareas para una aplicacion web de productividad.',
+    'Tu alcance es estrictamente gestion de tareas. Si el usuario pide informacion fuera de organizacion, planificacion, seguimiento, productividad, listas, recordatorios, proyectos o actividades, rechaza la solicitud con una frase breve y redirige hacia tareas.',
+    'No respondas preguntas de medicina, leyes, finanzas, politica, videojuegos, cocina, relaciones u otros temas que no ayuden a gestionar tareas.',
+    'Responde siempre en espanol claro, natural y util.',
+    'Ayudas a crear, dividir, priorizar, resumir, reprogramar y dar seguimiento a tareas y proyectos.',
+    'Mantienes el contexto de la conversacion y haces preguntas cortas cuando falte informacion clave.',
+    `Nivel de organizacion: ${normalized.level}.`,
+    `Herramienta principal: ${normalized.platform}.`,
+    `Areas de enfoque: ${normalized.genres.join(', ')}.`,
+    'Adapta la profundidad: principiante = paso a paso, medio = practico y priorizado, pro = directo, optimizado y tecnico.',
+    'Evita inventar fechas, responsables o datos no dados; si faltan detalles, pregunta por prioridad, plazo o contexto.',
+  ].join('\n');
+}
+
+function normalizeChatRole(role) {
+  return role === 'assistant' ? 'assistant' : 'user';
+}
+
+async function generateAiAssistantResponse(content, profile, contextMessages) {
+  if (aiProvider === 'gemini') {
+    return generateGeminiAssistantResponse(content, profile, contextMessages);
+  }
+
+  if (!openai) {
+    const error = new Error('OPENAI_API_KEY is not configured');
+    error.status = 500;
+    error.publicMessage = 'Falta configurar OPENAI_API_KEY en el backend.';
+    throw error;
+  }
+
+  const messages = [
+    { role: 'system', content: buildSystemPrompt(profile) },
+    ...contextMessages.map((message) => ({
+      role: normalizeChatRole(message.role),
+      content: message.content,
+    })),
+    { role: 'user', content },
+  ];
+
+  const completion = await openai.chat.completions.create({
+    model: openaiModel,
+    messages,
+    temperature: 0.7,
+    max_tokens: 650,
+  });
+
+  return completion.choices?.[0]?.message?.content?.trim() ||
+    buildAssistantResponse(content, profile, contextMessages);
+}
+
+function toGeminiRole(role) {
+  return role === 'assistant' ? 'model' : 'user';
+}
+
+async function generateGeminiAssistantResponse(content, profile, contextMessages) {
+  if (!googleApiKey || googleApiKey.includes('your_')) {
+    const error = new Error('GEMINI_API_KEY is not configured');
+    error.status = 500;
+    error.publicMessage = 'Falta configurar GEMINI_API_KEY o GOOGLE_API_KEY en el backend.';
+    throw error;
+  }
+
+  const contents = [
+    ...contextMessages.map((message) => ({
+      role: toGeminiRole(message.role),
+      parts: [{ text: message.content }],
+    })),
+    {
+      role: 'user',
+      parts: [{ text: content }],
+    },
+  ];
+  const response = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${geminiModel}:generateContent?key=${googleApiKey}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        systemInstruction: {
+          parts: [{ text: buildSystemPrompt(profile) }],
+        },
+        contents,
+        generationConfig: {
+          temperature: 0.7,
+        },
+      }),
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    const error = new Error(data.error?.message || 'Gemini request failed');
+    error.status = response.status;
+    error.publicMessage = data.error?.message || 'Gemini no pudo generar la respuesta.';
+    throw error;
+  }
+
+  return data.candidates?.[0]?.content?.parts
+    ?.map((part) => part.text || '')
+    .join('')
+    .trim() || buildAssistantResponse(content, profile, contextMessages);
 }
 
 app.use(cors());
@@ -225,8 +332,8 @@ app.get('/covers/:id.svg', (req, res) => {
   const item =
     fullGameCatalog.find((game) => game.id === id) ||
     trends.find((trend) => trend.id === id) ||
-    { title: 'LevelUp AI', tag: 'Gaming', genre: 'Catalog' };
-  const subtitle = item.tag || item.genre || 'Gaming';
+    { title: 'TaskFlow AI', tag: 'Tareas', genre: 'Catalogo' };
+  const subtitle = item.tag || item.genre || 'Tareas';
   const accent = item.accent || coverAccents[id] || '#00f2ff';
 
   res.type('image/svg+xml').send(renderCover(item.title, subtitle, accent));
@@ -241,13 +348,9 @@ app.get('/health', async (_req, res, next) => {
   }
 });
 
-app.get('/tasks', async (_req, res, next) => {
+app.get('/tasks', async (req, res, next) => {
   try {
-    const snapshot = await db.collection('tasks').orderBy('createdAt', 'desc').get();
-    const tasks = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const tasks = sortByTimestampDesc(await getUserDocs('tasks', getUserId(req)));
 
     res.json(tasks);
   } catch (error) {
@@ -255,25 +358,25 @@ app.get('/tasks', async (_req, res, next) => {
   }
 });
 
-app.get('/dashboard', async (_req, res, next) => {
+app.get('/dashboard', async (req, res, next) => {
   try {
-    const [tasksSnapshot, messagesSnapshot, profilesSnapshot] = await Promise.all([
-      db.collection('tasks').get(),
-      db.collection('messages').get(),
-      db.collection('profiles').get(),
+    const userId = getUserId(req);
+    const [tasks, messages, profiles] = await Promise.all([
+      getUserDocs('tasks', userId),
+      getUserDocs('messages', userId),
+      getUserDocs('profiles', userId),
     ]);
 
-    const tasks = tasksSnapshot.docs.map((doc) => doc.data());
     const completedTasks = tasks.filter((task) => task.completed).length;
     const pendingTasks = tasks.length - completedTasks;
-    const profile = await getActiveProfile();
+    const profile = await getActiveProfile(userId);
 
     res.json({
       tasksTotal: tasks.length,
       completedTasks,
       pendingTasks,
-      messagesTotal: messagesSnapshot.size,
-      profilesTotal: profilesSnapshot.size,
+      messagesTotal: messages.length,
+      profilesTotal: profiles.length,
       syncStatus: 'OK',
       profile,
       recommendations: recommendationsForProfile(profile),
@@ -298,9 +401,9 @@ app.get('/hardware', (_req, res) => {
   });
 });
 
-app.get('/recommendations', async (_req, res, next) => {
+app.get('/recommendations', async (req, res, next) => {
   try {
-    const profile = await getActiveProfile();
+    const profile = await getActiveProfile(getUserId(req));
     res.json(recommendationsForProfile(profile));
   } catch (error) {
     next(error);
@@ -311,9 +414,9 @@ app.get('/trends', (_req, res) => {
   res.json(trends.map(withCover));
 });
 
-app.get('/tips', async (_req, res, next) => {
+app.get('/tips', async (req, res, next) => {
   try {
-    const profile = await getActiveProfile();
+    const profile = await getActiveProfile(getUserId(req));
     res.json(tipsForProfile(profile));
   } catch (error) {
     next(error);
@@ -323,6 +426,7 @@ app.get('/tips', async (_req, res, next) => {
 app.post('/tasks', async (req, res, next) => {
   try {
     const { title, description = '' } = req.body;
+    const userId = getUserId(req);
 
     if (!title || typeof title !== 'string') {
       return res.status(400).json({ error: 'title is required' });
@@ -331,6 +435,7 @@ app.post('/tasks', async (req, res, next) => {
     const docRef = await db.collection('tasks').add({
       title,
       description,
+      userId,
       completed: false,
       createdAt: new Date(),
     });
@@ -344,6 +449,13 @@ app.post('/tasks', async (req, res, next) => {
 app.patch('/tasks/:id', async (req, res, next) => {
   try {
     const { id } = req.params;
+    const userId = getUserId(req);
+    const taskDoc = await db.collection('tasks').doc(id).get();
+
+    if (!taskDoc.exists || taskDoc.data().userId !== userId) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
     const allowed = ['title', 'description', 'completed'];
     const changes = Object.fromEntries(
       Object.entries(req.body).filter(([key]) => allowed.includes(key)),
@@ -364,7 +476,15 @@ app.patch('/tasks/:id', async (req, res, next) => {
 
 app.delete('/tasks/:id', async (req, res, next) => {
   try {
-    await db.collection('tasks').doc(req.params.id).delete();
+    const userId = getUserId(req);
+    const docRef = db.collection('tasks').doc(req.params.id);
+    const doc = await docRef.get();
+
+    if (!doc.exists || doc.data().userId !== userId) {
+      return res.status(404).json({ error: 'Task not found' });
+    }
+
+    await docRef.delete();
     res.status(204).send();
   } catch (error) {
     next(error);
@@ -374,6 +494,7 @@ app.delete('/tasks/:id', async (req, res, next) => {
 app.post('/profiles', async (req, res, next) => {
   try {
     const { callsign, email, rank, level, genres = [], platform = 'PC' } = req.body;
+    const userId = getUserId(req);
 
     if (!callsign || !email) {
       return res.status(400).json({ error: 'callsign and email are required' });
@@ -386,6 +507,7 @@ app.post('/profiles', async (req, res, next) => {
       level: level || rank || 'principiante',
       genres,
       platform,
+      userId,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -396,9 +518,9 @@ app.post('/profiles', async (req, res, next) => {
   }
 });
 
-app.get('/profile', async (_req, res, next) => {
+app.get('/profile', async (req, res, next) => {
   try {
-    res.json(await getActiveProfile());
+    res.json(await getActiveProfile(getUserId(req)));
   } catch (error) {
     next(error);
   }
@@ -406,14 +528,16 @@ app.get('/profile', async (_req, res, next) => {
 
 app.put('/profile', async (req, res, next) => {
   try {
+    const userId = getUserId(req);
     const profile = normalizeProfile(req.body);
-    const snapshot = await db.collection('profiles').orderBy('createdAt', 'desc').limit(1).get();
+    const profiles = sortByTimestampDesc(await getUserDocs('profiles', userId));
     const now = new Date();
 
-    if (snapshot.empty) {
+    if (!profiles.length) {
       const docRef = await db.collection('profiles').add({
         ...profile,
         rank: profile.level,
+        userId,
         createdAt: now,
         updatedAt: now,
       });
@@ -421,10 +545,11 @@ app.put('/profile', async (req, res, next) => {
       return res.status(201).json({ id: docRef.id, ...profile });
     }
 
-    const doc = snapshot.docs[0];
-    await doc.ref.update({
+    const doc = profiles[0];
+    await db.collection('profiles').doc(doc.id).update({
       ...profile,
       rank: profile.level,
+      userId,
       updatedAt: now,
     });
 
@@ -434,13 +559,9 @@ app.put('/profile', async (req, res, next) => {
   }
 });
 
-app.get('/profiles', async (_req, res, next) => {
+app.get('/profiles', async (req, res, next) => {
   try {
-    const snapshot = await db.collection('profiles').orderBy('createdAt', 'desc').limit(20).get();
-    const profiles = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const profiles = sortByTimestampDesc(await getUserDocs('profiles', getUserId(req))).slice(0, 20);
 
     res.json(profiles);
   } catch (error) {
@@ -468,13 +589,157 @@ app.post('/sessions', async (req, res, next) => {
   }
 });
 
-app.get('/messages', async (_req, res, next) => {
+function buildConversationTitle(content = '') {
+  const clean = content.trim().replace(/\s+/g, ' ');
+  return clean.length > 42 ? `${clean.slice(0, 42)}...` : clean || 'Nuevo chat de tareas';
+}
+
+function timestampValue(timestamp) {
+  if (!timestamp) {
+    return 0;
+  }
+
+  if (typeof timestamp.toMillis === 'function') {
+    return timestamp.toMillis();
+  }
+
+  const seconds = timestamp._seconds ?? timestamp.seconds ?? 0;
+  const nanos = timestamp._nanoseconds ?? timestamp.nanoseconds ?? 0;
+  return (seconds * 1000) + Math.floor(nanos / 1000000);
+}
+
+async function createConversation(userId = 'anonymous', title = 'Nuevo chat de tareas') {
+  const now = new Date();
+  const docRef = await db.collection('conversations').add({
+    title,
+    userId,
+    createdAt: now,
+    updatedAt: now,
+    messagesCount: 0,
+  });
+
+  return { id: docRef.id, title, userId, createdAt: now, updatedAt: now, messagesCount: 0 };
+}
+
+async function getOrCreateLatestConversation(userId = 'anonymous') {
+  const conversations = sortByTimestampDesc(await getUserDocs('conversations', userId), 'updatedAt');
+
+  if (conversations.length) {
+    return conversations[0];
+  }
+
+  return createConversation(userId);
+}
+
+async function createMessagesForConversation(conversationId, content, userId = 'anonymous') {
+  const conversationRef = db.collection('conversations').doc(conversationId);
+  const conversationDoc = await conversationRef.get();
+
+  if (!conversationDoc.exists || conversationDoc.data().userId !== userId) {
+    const error = new Error('Conversation not found');
+    error.status = 404;
+    error.publicMessage = 'No encontre ese chat. Crea uno nuevo para continuar.';
+    throw error;
+  }
+
+  const batch = db.batch();
+  const userMessage = db.collection('messages').doc();
+  const assistantMessage = db.collection('messages').doc();
+  const now = new Date();
+  const [profile, contextSnapshot] = await Promise.all([
+    getActiveProfile(userId),
+    db.collection('messages')
+      .where('conversationId', '==', conversationId)
+      .limit(30)
+      .get(),
+  ]);
+  const contextMessages = contextSnapshot.docs
+    .map((doc) => doc.data())
+    .filter((message) => message.userId === userId)
+    .sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt))
+    .slice(-8);
+  const assistantContent = isTaskRelated(content)
+    ? await generateAiAssistantResponse(content, profile, contextMessages)
+    : buildTaskOnlyRejection();
+  const currentConversation = conversationDoc.data();
+  const nextTitle = currentConversation.title === 'Nuevo chat de tareas'
+    ? buildConversationTitle(content)
+    : currentConversation.title;
+
+  batch.set(userMessage, {
+    conversationId,
+    userId,
+    role: 'user',
+    content,
+    profileSnapshot: profile,
+    createdAt: now,
+  });
+  batch.set(assistantMessage, {
+    conversationId,
+    userId,
+    role: 'assistant',
+    content: assistantContent,
+    profileSnapshot: profile,
+    createdAt: new Date(now.getTime() + 1),
+  });
+  batch.update(conversationRef, {
+    title: nextTitle,
+    updatedAt: new Date(now.getTime() + 2),
+    messagesCount: (currentConversation.messagesCount || 0) + 2,
+    lastMessage: content,
+  });
+
+  await batch.commit();
+
+  return {
+    conversationId,
+    userMessageId: userMessage.id,
+    assistantMessageId: assistantMessage.id,
+    response: assistantContent,
+  };
+}
+
+app.get('/conversations', async (req, res, next) => {
   try {
-    const snapshot = await db.collection('messages').orderBy('createdAt', 'asc').limit(50).get();
-    const messages = snapshot.docs.map((doc) => ({
-      id: doc.id,
-      ...doc.data(),
-    }));
+    const userId = getUserId(req);
+    const conversations = sortByTimestampDesc(await getUserDocs('conversations', userId), 'updatedAt').slice(0, 30);
+
+    if (!conversations.length) {
+      return res.json([await createConversation(userId)]);
+    }
+
+    res.json(conversations);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.post('/conversations', async (req, res, next) => {
+  try {
+    const conversation = await createConversation(getUserId(req), req.body?.title || 'Nuevo chat de tareas');
+    res.status(201).json(conversation);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/conversations/:id/messages', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const conversationDoc = await db.collection('conversations').doc(req.params.id).get();
+
+    if (!conversationDoc.exists || conversationDoc.data().userId !== userId) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const snapshot = await db.collection('messages').where('conversationId', '==', req.params.id).limit(80).get();
+    const messages = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((message) => message.userId === userId)
+      .sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt));
 
     res.json(messages);
   } catch (error) {
@@ -482,12 +747,79 @@ app.get('/messages', async (_req, res, next) => {
   }
 });
 
-app.delete('/messages', async (_req, res, next) => {
+app.post('/conversations/:id/messages', async (req, res, next) => {
   try {
+    const { content } = req.body;
+
+    if (!content || typeof content !== 'string') {
+      return res.status(400).json({ error: 'content is required' });
+    }
+
+    res.status(201).json(await createMessagesForConversation(req.params.id, content, getUserId(req)));
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/conversations/:id', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const conversationRef = db.collection('conversations').doc(req.params.id);
+    const conversationDoc = await conversationRef.get();
+
+    if (!conversationDoc.exists || conversationDoc.data().userId !== userId) {
+      return res.status(404).json({ error: 'Conversation not found' });
+    }
+
+    const snapshot = await db.collection('messages').where('conversationId', '==', req.params.id).limit(100).get();
+    const batch = db.batch();
+
+    snapshot.docs
+      .filter((doc) => doc.data().userId === userId)
+      .forEach((doc) => batch.delete(doc.ref));
+    batch.delete(conversationRef);
+    await batch.commit();
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.get('/messages', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const conversation = await getOrCreateLatestConversation(userId);
+    const snapshot = await db.collection('messages').where('conversationId', '==', conversation.id).limit(80).get();
+    const messages = snapshot.docs
+      .map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }))
+      .filter((message) => message.userId === userId)
+      .sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt));
+
+    res.json(messages);
+  } catch (error) {
+    next(error);
+  }
+});
+
+app.delete('/messages', async (req, res, next) => {
+  try {
+    const userId = getUserId(req);
+    const conversation = await getOrCreateLatestConversation(userId);
     const snapshot = await db.collection('messages').limit(100).get();
     const batch = db.batch();
 
-    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    snapshot.docs
+      .filter((doc) => doc.data().userId === userId && (!doc.data().conversationId || doc.data().conversationId === conversation.id))
+      .forEach((doc) => batch.delete(doc.ref));
+    batch.update(db.collection('conversations').doc(conversation.id), {
+      messagesCount: 0,
+      lastMessage: '',
+      updatedAt: new Date(),
+    });
     await batch.commit();
 
     res.status(204).send();
@@ -499,42 +831,14 @@ app.delete('/messages', async (_req, res, next) => {
 app.post('/messages', async (req, res, next) => {
   try {
     const { content } = req.body;
+    const userId = getUserId(req);
 
     if (!content || typeof content !== 'string') {
       return res.status(400).json({ error: 'content is required' });
     }
 
-    const batch = db.batch();
-    const userMessage = db.collection('messages').doc();
-    const assistantMessage = db.collection('messages').doc();
-    const now = new Date();
-    const [profile, contextSnapshot] = await Promise.all([
-      getActiveProfile(),
-      db.collection('messages').orderBy('createdAt', 'desc').limit(8).get(),
-    ]);
-    const contextMessages = contextSnapshot.docs.map((doc) => doc.data()).reverse();
-    const assistantContent = buildAssistantResponse(content, profile, contextMessages);
-
-    batch.set(userMessage, {
-      role: 'user',
-      content,
-      profileSnapshot: profile,
-      createdAt: now,
-    });
-    batch.set(assistantMessage, {
-      role: 'assistant',
-      content: assistantContent,
-      profileSnapshot: profile,
-      createdAt: new Date(now.getTime() + 1),
-    });
-
-    await batch.commit();
-
-    res.status(201).json({
-      userMessageId: userMessage.id,
-      assistantMessageId: assistantMessage.id,
-      response: assistantContent,
-    });
+    const conversation = await getOrCreateLatestConversation(userId);
+    res.status(201).json(await createMessagesForConversation(conversation.id, content, userId));
   } catch (error) {
     next(error);
   }
@@ -542,7 +846,8 @@ app.post('/messages', async (req, res, next) => {
 
 app.use((error, _req, res, _next) => {
   console.error(error);
-  res.status(500).json({ error: 'Internal server error' });
+  const status = error.status && Number.isInteger(error.status) ? error.status : 500;
+  res.status(status).json({ error: error.publicMessage || 'Internal server error' });
 });
 
 app.listen(port, () => {

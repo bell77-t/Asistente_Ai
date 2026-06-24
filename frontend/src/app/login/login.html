@@ -1,10 +1,10 @@
-<main class="auth-page page-shell">
+﻿<main class="auth-page page-shell">
   <div class="scanline"></div>
   <section class="hero">
     <div class="hero-card panel">
       <div class="hud-corners"></div>
-      <span class="eyebrow">Neural command login</span>
-      <h1 class="brand-title">LevelUp AI</h1>
+      <span class="eyebrow">Login de tareas</span>
+      <h1 class="brand-title">TaskFlow AI</h1>
       <p>El co-piloto tactico para tus tareas, sesiones y comandos. La interfaz vuelve al estilo inicial, pero ahora todo lo importante queda conectado a Firestore por backend.</p>
       <div class="metrics">
         <span class="hud-chip">Firestore</span>
@@ -14,7 +14,7 @@
       <div class="command-preview">
         <div class="avatar-core">AI</div>
         <div>
-          <strong>Neural link synchronized</strong>
+          <strong>Sesion sincronizada</strong>
           <p>Latencia local: 4ms / Canal seguro activo</p>
         </div>
       </div>
@@ -23,23 +23,24 @@
 
   <section class="panel auth-card">
     <span class="eyebrow">Secure handshake</span>
-    <h2>Welcome back, Commander</h2>
+    <h2>Bienvenido de nuevo</h2>
     <form [formGroup]="form" (ngSubmit)="submit()">
       <div class="field">
-        <label for="email">Commander ID</label>
+        <label for="email">Correo</label>
         <input id="email" type="email" formControlName="email" placeholder="name@command.hq" />
       </div>
       <div class="field">
-        <label for="password">Security key</label>
+        <label for="password">Clave</label>
         <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
       </div>
       <button class="primary-button" type="submit" [disabled]="loading">
-        {{ loading ? 'Autenticando...' : 'Execute login' }}
+        {{ loading ? 'Autenticando...' : 'Iniciar sesion' }}
       </button>
     </form>
     @if (message) {
       <p class="status error">{{ message }}</p>
     }
-    <p class="status">Nuevo recluta? <a routerLink="/register">Inicializar cuenta</a></p>
+    <p class="status">Nueva cuenta? <a routerLink="/register">Crear cuenta</a></p>
   </section>
 </main>
+
