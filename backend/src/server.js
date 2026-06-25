@@ -419,28 +419,26 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
 }
 
 const allowedOrigins = [
-  'http://localhost:4200',
-  'https://asistente-ai-ur0o.onrender.com'
+  'http://localhost:4200', // Si lo pruebas localmente en Angular
+  'http://localhost:3000',
+  'https://asistente-ai-ur0o.onrender.com' // ¡Tu URL exacta de frontend en Render!
 ];
 
 app.use(cors({
-  origin: (origin, callback) => {
-    // Acepta solicitudes sin origen (como Postman, curl, o ciertas llamadas internas)
-    // y también permite tu origen exacto de Render y localhost
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error('Acceso denegado por políticas de CORS en TaskFlow AI'));
+  origin: function (origin, callback) {
+    // Permite solicitudes sin origen (como aplicaciones móviles o curl local)
+    if (!origin) return callback(null, true);
+
+    if (allowedOrigins.indexOf(origin) === -1) {
+      const msg = 'El acceso a este sitio está bloqueado por la política de CORS (CORS Policy).';
+      return callback(new Error(msg), false);
     }
+    return callback(null, true);
   },
   credentials: true,
-  methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
-  allowedHeaders: 'Content-Type,Authorization,x-user-id'
+  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization,x-user-id'
 }));
-
-// ¡Muy importante! Agrega este manejador para asegurarte de que las peticiones 
-// OPTIONS (preflight) respondan de inmediato con un estado 204 sin bloquearse.
-app.options('*', cors());
 app.use(express.json());
 
 app.get('/covers/:id.svg', (req, res) => {
