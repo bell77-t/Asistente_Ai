@@ -23,3 +23,13 @@ npm run dev
 - `GET /health`: verifica la conexion con Firestore.
 - `GET /tasks`: lista tareas desde la coleccion `tasks`.
 - `POST /tasks`: crea una tarea con `title` y `description`.
+
+## Despliegue en Render
+
+1. Conecta este repositorio a Render.
+2. Render detectara el archivo `render.yaml` y creara el servicio web del backend.
+3. En la pestaña de Environment Variables del servicio agrega:
+   - `GEMINI_API_KEY`: tu clave de Gemini.
+   - `FIREBASE_SERVICE_ACCOUNT`: el contenido JSON completo del service account de Firebase.
+4. Haz deploy y espera a que Render complete el build.
+5. La URL final sera algo como `https://<nombre-del-servicio>.onrender.com`.
