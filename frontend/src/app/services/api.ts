@@ -60,7 +60,7 @@ export interface DashboardStats {
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly baseUrl = 'http://localhost:3000';
+  private readonly baseUrl = 'https://asistente-ai-ur0o.onrender.com';
 
   private get requestOptions() {
     const uid = this.auth.currentUserId;
