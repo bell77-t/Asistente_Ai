@@ -20,10 +20,10 @@ function getServiceAccount() {
 
     for (const candidate of candidates) {
       try {
+        // CORRECCIÓN: Quitamos el replace de caracteres de control
         const sanitized = candidate
           .replace(/\\n/g, '\n')
-          .replace(/\r/g, '')
-          .replace(/[\u0000-\u0019]+/g, '');
+          .replace(/\r/g, '');
 
         const parsed = JSON.parse(sanitized);
         if (parsed.client_email && parsed.private_key) {
@@ -36,10 +36,11 @@ function getServiceAccount() {
 
     try {
       const decoded = Buffer.from(raw, 'base64').toString('utf8');
+      // CORRECCIÓN: Quitamos el replace de caracteres de control
       const sanitized = decoded
         .replace(/\\n/g, '\n')
-        .replace(/\r/g, '')
-        .replace(/[\u0000-\u0019]+/g, '');
+        .replace(/\r/g, '');
+        
       const parsed = JSON.parse(sanitized);
 
       if (parsed.client_email && parsed.private_key) {
