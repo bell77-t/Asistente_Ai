@@ -14,7 +14,7 @@
     <aside class="panel profile-side">
       <span class="eyebrow">Perfil de organizacion</span>
       <h2>{{ form.controls.callsign.value || 'Usuario' }}</h2>
-      <p>{{ form.controls.level.value }} · {{ form.controls.platform.value }}</p>
+      <p>Cuenta para gestionar tareas y recibir ayuda de IA.</p>
       <div class="profile-tags">
         @for (genre of selectedGenres.split(', '); track genre) {
           <span>{{ genre }}</span>
@@ -30,24 +30,30 @@
     </div>
 
     @if (mode === 'profile' && hasProfile && !editing) {
-      <div class="profile-summary">
-        <div>
-          <span>Nombre</span>
-          <strong>{{ form.controls.callsign.value || 'Usuario' }}</strong>
-        </div>
-        <div>
-          <span>Nivel</span>
-          <strong>{{ form.controls.level.value }}</strong>
-        </div>
-        <div>
-          <span>Herramienta principal</span>
-          <strong>{{ form.controls.platform.value }}</strong>
-        </div>
-        <div>
-          <span>areas</span>
-          <strong>{{ selectedGenres }}</strong>
-        </div>
-      </div>
+      <table class="profile-table">
+        <tbody>
+          <tr>
+            <th>Nombre</th>
+            <td>{{ form.controls.callsign.value || 'Usuario' }}</td>
+          </tr>
+          <tr>
+            <th>Correo</th>
+            <td>{{ form.controls.email.value || 'Sin correo' }}</td>
+          </tr>
+          <tr>
+            <th>Nivel</th>
+            <td>{{ form.controls.level.value }}</td>
+          </tr>
+          <tr>
+            <th>Dispositivo</th>
+            <td>{{ form.controls.platform.value }}</td>
+          </tr>
+          <tr>
+            <th>Areas de tareas</th>
+            <td>{{ selectedGenres }}</td>
+          </tr>
+        </tbody>
+      </table>
       <button class="primary-button" type="button" (click)="toggleEdit()">Editar informacion</button>
     }
 
@@ -76,15 +82,15 @@
         </select>
       </div>
       <div class="field">
-        <label for="platform">Herramienta principal</label>
+        <label for="platform">Dispositivo de trabajo</label>
         <select id="platform" formControlName="platform">
-          <option value="PC">PC</option>
-          <option value="consola">Consola</option>
+          <option value="PC">Computador</option>
+          <option value="consola">Otro dispositivo</option>
           <option value="movil">Movil</option>
         </select>
       </div>
       <div class="field">
-        <label>Areas favoritas</label>
+        <label>Areas de tareas</label>
         <div class="genre-grid">
           <label><input type="checkbox" formControlName="genreFps" /> Trabajo</label>
           <label><input type="checkbox" formControlName="genreRpg" /> Estudio</label>

@@ -17,7 +17,7 @@ const openai = configuredOpenAiKey && aiProvider === 'openai'
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
 const openaiModel = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
-const geminiModel = process.env.GEMINI_MODEL || 'gemini-3.5-flash';
+const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 const gameCatalog = [
   { id: 'daily-planning', title: 'Plan diario', genres: ['Estudio', 'Trabajo'], platforms: ['PC'], level: ['medio', 'pro'], tag: 'Prioridad', note: 'Organiza tus tareas del dia por prioridad, tiempo estimado y estado de avance.' },
@@ -216,8 +216,9 @@ function isTaskRelated(content) {
 function buildTaskOnlyRejection() {
   return 'Solo puedo ayudarte con gestion de tareas: organizar pendientes, planear actividades, priorizar, crear listas, hacer seguimiento, resumir solicitudes o mejorar productividad. Reformula tu pregunta hacia tareas y te ayudo.';
 }
-function buildSystemPrompt(profile) {
+function buildSystemPrompt(profile, tasks = []) {
   const normalized = normalizeProfile(profile);
+  const taskContext = buildTaskContext(tasks);
 
   return [
     'Eres TaskFlow AI, un asistente de tareas para una aplicacion web de productividad.',
@@ -231,6 +232,27 @@ function buildSystemPrompt(profile) {
     `Areas de enfoque: ${normalized.genres.join(', ')}.`,
     'Adapta la profundidad: principiante = paso a paso, medio = practico y priorizado, pro = directo, optimizado y tecnico.',
     'Evita inventar fechas, responsables o datos no dados; si faltan detalles, pregunta por prioridad, plazo o contexto.',
+    taskContext,
+  ].join('\n');
+}
+
+function buildTaskContext(tasks = []) {
+  if (!tasks.length) {
+    return 'Tareas guardadas del usuario: no hay tareas registradas todavia.';
+  }
+
+  const lines = tasks.slice(0, 12).map((task, index) => {
+    const status = task.status || (task.completed ? 'completada' : 'pendiente');
+    const due = [task.dueDate, task.dueTime].filter(Boolean).join(' ') || 'sin fecha';
+    const notes = task.notes ? ` Notas: ${task.notes}.` : '';
+
+    return `${index + 1}. ${task.title} | estado: ${status} | prioridad: ${task.priority || 'media'} | categoria: ${task.category || 'General'} | fecha limite: ${due}. ${task.description || ''}${notes}`;
+  });
+
+  return [
+    'Tareas guardadas del usuario en Firestore:',
+    ...lines,
+    'Usa estas tareas como contexto real. Si el usuario pide organizar, priorizar, resumir, listar pendientes o sugerir siguientes pasos, basa la respuesta en estas tareas guardadas.',
   ].join('\n');
 }
 
@@ -238,10 +260,10 @@ function normalizeChatRole(role) {
   return role === 'assistant' ? 'assistant' : 'user';
 }
 
-async function generateAiAssistantResponse(content, profile, contextMessages) {
+async function generateAiAssistantResponse(content, profile, contextMessages, tasks = []) {
   try {
     if (aiProvider === 'gemini') {
-      return await generateGeminiAssistantResponse(content, profile, contextMessages);
+      return await generateGeminiAssistantResponse(content, profile, contextMessages, tasks);
     }
 
     if (!openai) {
@@ -252,7 +274,7 @@ async function generateAiAssistantResponse(content, profile, contextMessages) {
     }
 
     const messages = [
-      { role: 'system', content: buildSystemPrompt(profile) },
+      { role: 'system', content: buildSystemPrompt(profile, tasks) },
       ...contextMessages.map((message) => ({
         role: normalizeChatRole(message.role),
         content: message.content,
@@ -270,46 +292,41 @@ async function generateAiAssistantResponse(content, profile, contextMessages) {
     return completion.choices?.[0]?.message?.content?.trim() ||
       buildAssistantResponse(content, profile, contextMessages);
   } catch (error) {
-    if (shouldUseLocalFallback(error)) {
-      return `${buildAssistantResponse(content, profile, contextMessages)}\n\nNota: el modelo de IA esta con alta demanda ahora mismo, asi que use una respuesta local de respaldo para que puedas continuar.`;
-    }
+    console.warn('AI provider unavailable, using local fallback:', {
+      provider: aiProvider,
+      model: aiProvider === 'gemini' ? geminiModel : openaiModel,
+      status: error?.status,
+      message: error?.publicMessage || error?.message,
+    });
 
-    throw error;
+    const reason = buildAiFallbackReason(error);
+    return `${buildAssistantResponse(content, profile, contextMessages)}\n\nNota: ${reason} Use una respuesta local de respaldo para que el chat siga funcionando.`;
   }
 }
 
-function shouldUseLocalFallback(error) {
-  const message = `${error?.message || ''} ${error?.publicMessage || ''}`.toLowerCase();
-  const isMissingKey =
-    message.includes('api_key is not configured') ||
-    message.includes('falta configurar');
-  const isInvalidKey =
-    message.includes('api key not valid') ||
-    message.includes('invalid api key') ||
-    message.includes('permission denied') ||
-    message.includes('unauthorized');
+function buildAiFallbackReason(error) {
+  const message = `${error?.publicMessage || error?.message || ''}`.toLowerCase();
 
-  if (isMissingKey || isInvalidKey) {
-    return false;
+  if (error?.status === 429 || message.includes('quota') || message.includes('rate limit')) {
+    return 'el proveedor de IA rechazo la peticion por cuota o limite de uso.';
   }
 
-  return [408, 429, 500, 502, 503, 504].includes(error?.status) ||
-    message.includes('high demand') ||
-    message.includes('overloaded') ||
-    message.includes('temporarily') ||
-    message.includes('try again later') ||
-    message.includes('unavailable') ||
-    message.includes('model is currently') ||
-    message.includes('rate limit') ||
-    message.includes('quota') ||
-    message.includes('resource exhausted');
+  if (error?.status === 503 || message.includes('high demand') || message.includes('overloaded')) {
+    return 'el modelo de IA esta con alta demanda temporal.';
+  }
+
+  if (message.includes('api_key') || message.includes('api key') || message.includes('falta configurar')) {
+    return 'falta configurar una clave valida del proveedor de IA.';
+  }
+
+  return 'no pude conectar con el proveedor de IA en este momento.';
 }
 
 function toGeminiRole(role) {
   return role === 'assistant' ? 'model' : 'user';
 }
 
-async function generateGeminiAssistantResponse(content, profile, contextMessages) {
+async function generateGeminiAssistantResponse(content, profile, contextMessages, tasks = []) {
   if (!googleApiKey || googleApiKey.includes('your_')) {
     const error = new Error('GEMINI_API_KEY is not configured');
     error.status = 500;
@@ -334,7 +351,7 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         systemInstruction: {
-          parts: [{ text: buildSystemPrompt(profile) }],
+          parts: [{ text: buildSystemPrompt(profile, tasks) }],
         },
         contents,
         generationConfig: {
@@ -460,7 +477,16 @@ app.get('/tips', async (req, res, next) => {
 
 app.post('/tasks', async (req, res, next) => {
   try {
-    const { title, description = '' } = req.body;
+    const {
+      title,
+      description = '',
+      priority = 'media',
+      category = 'General',
+      dueDate = '',
+      dueTime = '',
+      status = 'pendiente',
+      notes = '',
+    } = req.body;
     const userId = getUserId(req);
 
     if (!title || typeof title !== 'string') {
@@ -468,10 +494,16 @@ app.post('/tasks', async (req, res, next) => {
     }
 
     const docRef = await db.collection('tasks').add({
-      title,
+      title: title.trim(),
       description,
+      priority,
+      category,
+      dueDate,
+      dueTime,
+      status,
+      notes,
       userId,
-      completed: false,
+      completed: status === 'completada',
       createdAt: new Date(),
     });
 
@@ -491,13 +523,21 @@ app.patch('/tasks/:id', async (req, res, next) => {
       return res.status(404).json({ error: 'Task not found' });
     }
 
-    const allowed = ['title', 'description', 'completed'];
+    const allowed = ['title', 'description', 'priority', 'category', 'dueDate', 'dueTime', 'status', 'notes', 'completed'];
     const changes = Object.fromEntries(
       Object.entries(req.body).filter(([key]) => allowed.includes(key)),
     );
 
     if (!Object.keys(changes).length) {
       return res.status(400).json({ error: 'No valid task fields provided' });
+    }
+
+    if (changes.status === 'completada') {
+      changes.completed = true;
+    } else if (changes.status && changes.status !== 'completada') {
+      changes.completed = false;
+    } else if (typeof changes.completed === 'boolean') {
+      changes.status = changes.completed ? 'completada' : 'pendiente';
     }
 
     changes.updatedAt = new Date();
@@ -681,20 +721,22 @@ async function createMessagesForConversation(conversationId, content, userId = '
   const userMessage = db.collection('messages').doc();
   const assistantMessage = db.collection('messages').doc();
   const now = new Date();
-  const [profile, contextSnapshot] = await Promise.all([
+  const [profile, contextSnapshot, tasks] = await Promise.all([
     getActiveProfile(userId),
     db.collection('messages')
       .where('conversationId', '==', conversationId)
       .limit(30)
       .get(),
+    getUserDocs('tasks', userId),
   ]);
   const contextMessages = contextSnapshot.docs
     .map((doc) => doc.data())
     .filter((message) => message.userId === userId)
     .sort((a, b) => timestampValue(a.createdAt) - timestampValue(b.createdAt))
     .slice(-8);
+  const taskContext = sortByTimestampDesc(tasks, 'updatedAt').slice(0, 12);
   const assistantContent = isTaskRelated(content)
-    ? await generateAiAssistantResponse(content, profile, contextMessages)
+    ? await generateAiAssistantResponse(content, profile, contextMessages, taskContext)
     : buildTaskOnlyRejection();
   const currentConversation = conversationDoc.data();
   const nextTitle = currentConversation.title === 'Nuevo chat de tareas'

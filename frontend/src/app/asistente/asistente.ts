@@ -23,6 +23,7 @@ export class Asistente implements OnInit {
   status = '';
   confirmClearOpen = false;
   conversationToDeleteId = '';
+  sendingContent = '';
 
   form = this.fb.nonNullable.group({
     content: ['', Validators.required],
@@ -113,7 +114,7 @@ export class Asistente implements OnInit {
   }
 
   sendMessage() {
-    if (this.form.invalid) {
+    if (this.form.invalid || this.loading) {
       return;
     }
 
@@ -124,25 +125,53 @@ export class Asistente implements OnInit {
 
     this.loading = true;
     this.status = '';
+    this.sendingContent = content;
+    this.form.reset({ content: '' });
+
+    const tempUserMessage: ChatMessage = {
+      id: `local-${Date.now()}`,
+      role: 'user',
+      content,
+    };
 
     const send = (conversationId: string) => {
+      this.messages = [...this.messages, { ...tempUserMessage, conversationId }];
+      this.cdr.detectChanges();
+
       this.api.createConversationMessage(conversationId, content).subscribe({
-      next: () => {
-        this.form.reset({ content: '' });
-        this.loading = false;
-        this.loadMessages();
-        this.loadConversations();
-        this.cdr.detectChanges();
-      },
-      error: (error) => {
-        this.loading = false;
-        const backendMessage = error?.error?.error || '';
-        this.status = isHighDemandError(backendMessage)
-          ? 'La IA esta con alta demanda ahora mismo. Intenta otra vez en unos segundos o reinicia el backend para activar el modo local de respaldo.'
-          : backendMessage || 'No se pudo guardar el mensaje.';
-        this.cdr.detectChanges();
-      },
-    });
+        next: (result) => {
+          this.loading = false;
+          this.sendingContent = '';
+          this.messages = [
+            ...this.messages.filter((message) => message.id !== tempUserMessage.id),
+            {
+              id: result.userMessageId,
+              conversationId,
+              role: 'user',
+              content,
+            },
+            {
+              id: result.assistantMessageId,
+              conversationId,
+              role: 'assistant',
+              content: result.response,
+            },
+          ];
+          this.loadConversations();
+          this.cdr.detectChanges();
+        },
+        error: (error) => {
+          this.loading = false;
+          this.sendingContent = '';
+          this.messages = this.messages.filter((message) => message.id !== tempUserMessage.id);
+          this.form.patchValue({ content });
+          const backendMessage = error?.error?.error || '';
+          this.status = isHighDemandError(backendMessage)
+            ? 'La IA esta con alta demanda ahora mismo. Intenta otra vez en unos segundos.'
+            : backendMessage || 'No se pudo guardar el mensaje. Verifica que el backend este encendido.';
+          this.cdr.detectChanges();
+        },
+      });
     };
 
     if (this.selectedConversationId) {
@@ -154,10 +183,13 @@ export class Asistente implements OnInit {
       next: (conversation) => {
         this.conversations = [conversation, ...this.conversations];
         this.selectedConversationId = conversation.id;
+        this.messages = [];
         send(conversation.id);
       },
       error: () => {
         this.loading = false;
+        this.sendingContent = '';
+        this.form.patchValue({ content });
         this.status = 'No pude crear el chat para enviar el mensaje.';
         this.cdr.detectChanges();
       },

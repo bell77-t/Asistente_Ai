@@ -5,7 +5,7 @@
       <a routerLink="/dashboard" class="active">Dashboard</a>
       <a routerLink="/asistente">Asistente IA</a>
       <a routerLink="/profile">Perfil</a>
-      <a routerLink="/login">Salir</a>
+      <button class="nav-button" type="button" (click)="logout()">Salir</button>
     </nav>
     <div class="nav-profile">
       <span>{{ profile?.callsign || 'Usuario' }}</span>
@@ -35,9 +35,9 @@
         <p>{{ profile?.platform || 'PC' }} - {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
       </article>
       <article class="panel metric">
-        <span class="eyebrow">System status</span>
-        <strong>{{ loading ? 'SYNC' : (stats?.syncStatus ?? 'OK') }}</strong>
-        <p>Firestore via backend</p>
+        <span class="eyebrow">Tareas</span>
+        <strong>{{ stats?.pendingTasks ?? 0 }}</strong>
+        <p>{{ stats?.completedTasks ?? 0 }} completadas de {{ stats?.tasksTotal ?? tasks.length }}</p>
       </article>
       <article class="panel metric">
         <span class="eyebrow">Modulo IA</span>
@@ -47,93 +47,130 @@
     </section>
 
     <section class="dashboard-grid">
-      <article class="panel hardware-card">
-        <span class="eyebrow">Hardware vitals</span>
-        <h3>Estado del sistema</h3>
-        <div class="vital">
-          <span>CPU TEMP</span>
-          <strong>{{ hardware?.cpuTemp ?? 0 }} C</strong>
-        </div>
-        <div class="bar"><i [style.width.%]="hardware?.cpuTemp ?? 0"></i></div>
-        <div class="vital">
-          <span>GPU LOAD</span>
-          <strong>{{ hardware?.gpuLoad ?? 0 }}%</strong>
-        </div>
-        <div class="bar"><i [style.width.%]="hardware?.gpuLoad ?? 0"></i></div>
-        <div class="vital">
-          <span>MEMORY</span>
-          <strong>{{ hardware?.memoryLoad ?? 0 }}%</strong>
-        </div>
-        <div class="bar"><i [style.width.%]="hardware?.memoryLoad ?? 0"></i></div>
-        <p class="status">{{ hardware?.driver ?? 'Driver pendiente' }} {{ hardware?.updateAvailable ? '- update disponible' : '' }}</p>
+      <article class="panel task-form" aria-labelledby="form-title">
+        <span class="eyebrow">Gestion</span>
+        <h3 id="form-title">{{ editingTaskId ? 'Editar tarea' : 'Nueva tarea' }}</h3>
+
+        <form [formGroup]="taskForm" (ngSubmit)="saveTask()">
+          <label class="field" for="task-title">
+            <span>Titulo</span>
+            <input id="task-title" formControlName="title" placeholder="Ej. Entregar evidencia del aplicativo" />
+          </label>
+
+          <label class="field" for="task-desc">
+            <span>Descripcion</span>
+            <textarea id="task-desc" formControlName="description" placeholder="Resumen, objetivo o pasos principales"></textarea>
+          </label>
+
+          <div class="form-row">
+            <label class="field" for="task-category">
+              <span>Categoria</span>
+              <input id="task-category" formControlName="category" placeholder="Trabajo, Estudio, Personal" />
+            </label>
+
+            <label class="field" for="task-priority">
+              <span>Prioridad</span>
+              <select id="task-priority" formControlName="priority">
+                <option value="baja">Baja</option>
+                <option value="media">Media</option>
+                <option value="alta">Alta</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-row">
+            <label class="field" for="task-duedate">
+              <span>Fecha limite</span>
+              <input id="task-duedate" type="date" formControlName="dueDate" />
+            </label>
+
+            <label class="field" for="task-duetime">
+              <span>Hora</span>
+              <input id="task-duetime" type="time" formControlName="dueTime" />
+            </label>
+          </div>
+
+          <label class="field" for="task-status">
+            <span>Estado</span>
+            <select id="task-status" formControlName="status">
+              <option value="pendiente">Pendiente</option>
+              <option value="en_progreso">En progreso</option>
+              <option value="completada">Completada</option>
+            </select>
+          </label>
+
+          <label class="field" for="task-notes">
+            <span>Notas</span>
+            <textarea id="task-notes" formControlName="notes" rows="2" placeholder="Enlaces, bloqueos u observaciones"></textarea>
+          </label>
+
+          <div class="form-actions">
+            <button class="primary-button" type="submit" [disabled]="loading || taskForm.invalid">
+              {{ loading ? 'Procesando...' : (editingTaskId ? 'Actualizar tarea' : 'Guardar tarea') }}
+            </button>
+            @if (editingTaskId) {
+              <button class="secondary-button" type="button" (click)="cancelEditTask()">Cancelar</button>
+            }
+          </div>
+        </form>
+
+        @if (message) {
+          <p class="status error" role="alert">{{ message }}</p>
+        }
       </article>
 
-      <article class="panel recommendations-card">
-        <span class="eyebrow">Plantillas recomendadas</span>
-        <h3>Catalogo de tareas</h3>
-        <div class="recommendations">
-          @for (game of recommendations; track game.id) {
-            <button class="recommendation" type="button" (click)="openRecommendation(game)">
-              <img [src]="game.imageUrl" [alt]="game.title" />
-              <span class="hud-chip">{{ game.tag }}</span>
-              <strong>{{ game.title }}</strong>
-              <p>{{ game.note }}</p>
-            </button>
+      <article class="panel task-list" aria-labelledby="list-title">
+        <span class="eyebrow">Firestore</span>
+        <h3 id="list-title">Tareas guardadas</h3>
+
+        <div class="items">
+          @if (!tasks.length) {
+            <p class="status">No hay tareas guardadas todavia.</p>
+          }
+
+          @for (task of tasks; track task.id) {
+            <div
+              class="task-item"
+              [class.completed]="task.status === 'completada' || task.completed"
+              [class.priority-high]="task.priority === 'alta'"
+              [class.priority-low]="task.priority === 'baja'"
+            >
+              <div class="task-content">
+                <div class="task-badges">
+                  <span>{{ task.status === 'en_progreso' ? 'En progreso' : (task.status === 'completada' || task.completed ? 'Completada' : 'Pendiente') }}</span>
+                  <span>{{ task.priority || 'media' }}</span>
+                  <span>{{ task.category || 'General' }}</span>
+                </div>
+                <strong>{{ task.title }}</strong>
+                <p>{{ task.description || 'Sin descripcion detallada' }}</p>
+                @if (task.notes) {
+                  <p class="task-note">Nota: {{ task.notes }}</p>
+                }
+                @if (task.dueDate || task.dueTime) {
+                  <p class="task-meta">Fecha limite: {{ task.dueDate || 'Sin fecha' }} {{ task.dueTime || '' }}</p>
+                }
+              </div>
+
+              <div class="task-actions">
+                <button class="secondary-button" type="button" (click)="startEditTask(task)">Editar</button>
+                <button class="secondary-button" type="button" (click)="toggleTask(task)">
+                  {{ task.status === 'completada' || task.completed ? 'Reabrir' : 'Completar' }}
+                </button>
+                <button class="icon-button danger" type="button" (click)="deleteTask(task.id)">Eliminar</button>
+              </div>
+            </div>
           }
         </div>
       </article>
     </section>
 
-    <section class="dashboard-grid compact">
-      <article class="panel recommendations-card">
-        <span class="eyebrow">Tendencias populares</span>
-        <h3>Radar tareas</h3>
-        <div class="recommendations">
-          @for (trend of trends; track trend.id) {
-            <button class="recommendation" type="button" (click)="openTrend(trend)">
-              <img [src]="trend.imageUrl" [alt]="trend.title" />
-              <span class="hud-chip">{{ trend.genre }}</span>
-              <strong>{{ trend.title }}</strong>
-              <p>{{ trend.signal }}</p>
-            </button>
-          }
-        </div>
-      </article>
-
-      <article class="panel tips-card">
-        <span class="eyebrow">Noticias / tips tareas</span>
-        <h3>Consejos para organizarte mejor</h3>
-        <div class="tips-list">
-          @for (tip of tips; track tip) {
-            <p>{{ tip }}</p>
-          }
-        </div>
-        <a class="quick-chat" routerLink="/asistente">Abrir IA tareas</a>
-      </article>
+    <section class="assistant-entry panel">
+      <div>
+        <span class="eyebrow">Asistente IA</span>
+        <h3>Consulta tus tareas guardadas</h3>
+        <p>La IA usa las tareas almacenadas en Firestore para ayudarte a priorizar, resumir pendientes y planear siguientes pasos.</p>
+      </div>
+      <a class="quick-chat" routerLink="/asistente">Abrir asistente</a>
     </section>
   </section>
-
-  @if (selectedCatalogItem) {
-    <section class="review-backdrop" (click)="closeCatalogReview()">
-      <article class="review-dialog panel" (click)="$event.stopPropagation()">
-        <img [src]="selectedCatalogItem.imageUrl" [alt]="selectedCatalogItem.title" />
-        <div class="review-content">
-          <span class="eyebrow">{{ selectedCatalogItem.kind === 'recommendation' ? 'Plantilla recomendada' : 'Metodo recomendado' }}</span>
-          <h2>{{ selectedCatalogItem.title }}</h2>
-          <span class="hud-chip">{{ selectedCatalogItem.label }}</span>
-          <p>{{ selectedCatalogItem.note }}</p>
-          <p class="review-extra">
-            {{ selectedCatalogItem.kind === 'recommendation'
-              ? 'Buena plantilla para tu perfil actual. Puedes abrir el chat de IA y pedir que la convierta en una lista de tareas.'
-              : 'Metodo util para organizar pendientes. Si te interesa, pregunta al chat como aplicarlo a tus tareas actuales.' }}
-          </p>
-          <div class="review-actions">
-            <a class="quick-chat" routerLink="/asistente">Pedir ayuda a la IA</a>
-            <button class="secondary-button" type="button" (click)="closeCatalogReview()">Cerrar</button>
-          </div>
-        </div>
-      </article>
-    </section>
-  }
 </main>
-

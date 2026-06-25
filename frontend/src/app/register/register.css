@@ -119,32 +119,33 @@ form {
   margin-top: 26px;
 }
 
-.profile-summary {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 14px;
+.profile-table {
+  width: 100%;
   margin: 26px 0;
-}
-
-.profile-summary div {
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-collapse: collapse;
+  overflow: hidden;
   border-radius: 8px;
   background: rgba(8, 12, 19, 0.72);
-  padding: 16px;
 }
 
-.profile-summary span {
-  display: block;
+.profile-table th,
+.profile-table td {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  padding: 14px 16px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.profile-table th {
+  width: 34%;
   color: #9fb0c2;
   font-size: 12px;
-  font-weight: 800;
   text-transform: uppercase;
 }
 
-.profile-summary strong {
-  display: block;
-  margin-top: 8px;
+.profile-table td {
   color: #e1fdff;
+  overflow-wrap: anywhere;
 }
 
 .genre-grid {
@@ -215,8 +216,7 @@ a {
 
 @media (max-width: 760px) {
   .profile-nav,
-  .profile-layout,
-  .profile-summary {
+  .profile-layout {
     grid-template-columns: 1fr;
   }
 

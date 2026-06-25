@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
-    "test": "ng test",
+    "test": "ng test --watch=false",
     "serve:ssr:asistente-tareas": "node dist/asistente-tareas/server/server.mjs"
   },
   "private": true,

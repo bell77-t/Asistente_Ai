@@ -6,6 +6,12 @@ export interface TaskRecord {
   id: string;
   title: string;
   description: string;
+  priority?: 'baja' | 'media' | 'alta';
+  category?: string;
+  dueDate?: string;
+  dueTime?: string;
+  status?: 'pendiente' | 'en_progreso' | 'completada';
+  notes?: string;
   completed: boolean;
   createdAt?: unknown;
 }
@@ -46,34 +52,6 @@ export interface DashboardStats {
   profilesTotal: number;
   syncStatus: string;
   profile: UserProfile;
-  recommendations: Recommendation[];
-  trends: Trend[];
-  tips: string[];
-}
-
-export interface HardwareStatus {
-  cpuTemp: number;
-  gpuLoad: number;
-  memoryLoad: number;
-  driver: string;
-  updateAvailable: boolean;
-  checkedAt: string;
-}
-
-export interface Recommendation {
-  id: string;
-  title: string;
-  tag: string;
-  note: string;
-  imageUrl: string;
-}
-
-export interface Trend {
-  id: string;
-  title: string;
-  genre: string;
-  signal: string;
-  imageUrl: string;
 }
 
 @Injectable({
@@ -94,31 +72,15 @@ export class ApiService {
     return this.http.get<DashboardStats>(`${this.baseUrl}/dashboard`, this.requestOptions);
   }
 
-  getHardwareStatus() {
-    return this.http.get<HardwareStatus>(`${this.baseUrl}/hardware`);
-  }
-
-  getRecommendations() {
-    return this.http.get<Recommendation[]>(`${this.baseUrl}/recommendations`, this.requestOptions);
-  }
-
-  getTrends() {
-    return this.http.get<Trend[]>(`${this.baseUrl}/trends`);
-  }
-
-  getTips() {
-    return this.http.get<string[]>(`${this.baseUrl}/tips`, this.requestOptions);
-  }
-
   getTasks() {
     return this.http.get<TaskRecord[]>(`${this.baseUrl}/tasks`, this.requestOptions);
   }
 
-  createTask(payload: Pick<TaskRecord, 'title' | 'description'>) {
+  createTask(payload: Pick<TaskRecord, 'title' | 'description' | 'priority' | 'category' | 'dueDate' | 'dueTime' | 'status' | 'notes'>) {
     return this.http.post<{ id: string }>(`${this.baseUrl}/tasks`, payload, this.requestOptions);
   }
 
-  updateTask(id: string, changes: Partial<Pick<TaskRecord, 'title' | 'description' | 'completed'>>) {
+  updateTask(id: string, changes: Partial<Pick<TaskRecord, 'title' | 'description' | 'priority' | 'category' | 'dueDate' | 'dueTime' | 'status' | 'notes' | 'completed'>>) {
     return this.http.patch<{ ok: true }>(`${this.baseUrl}/tasks/${id}`, changes, this.requestOptions);
   }
 
