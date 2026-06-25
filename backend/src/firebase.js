@@ -24,7 +24,7 @@ function getServiceAccount() {
     return JSON.parse(sanitized);
   }
 
-  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './firebaseKey.json';
+  const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './firebaseLLave.json';
   return require(path.resolve(__dirname, '..', credentialsPath));
 }
 
