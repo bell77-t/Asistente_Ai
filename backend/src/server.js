@@ -441,6 +441,10 @@ app.use(cors({
 }));
 app.use(express.json());
 
+app.get('/', (_req, res) => {
+  res.json({ ok: true, service: 'asistente-ai-backend', message: 'Backend activo' });
+});
+
 app.get('/covers/:id.svg', (req, res) => {
   const id = req.params.id.replace('.svg', '');
   const item =
@@ -453,12 +457,17 @@ app.get('/covers/:id.svg', (req, res) => {
   res.type('image/svg+xml').send(renderCover(item.title, subtitle, accent));
 });
 
-app.get('/health', async (_req, res, next) => {
+app.get('/health', async (_req, res) => {
   try {
     await db.collection('_health').limit(1).get();
     res.json({ ok: true, database: 'firestore' });
   } catch (error) {
-    next(error);
+    console.warn(`[health] Firestore no disponible: ${error.message}`);
+    res.status(200).json({
+      ok: true,
+      database: 'firestore-unavailable',
+      message: 'Backend activo, pero Firestore no respondió',
+    });
   }
 });
 
