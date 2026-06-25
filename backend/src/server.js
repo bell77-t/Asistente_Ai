@@ -16,7 +16,8 @@ const aiProvider = (process.env.AI_PROVIDER || (looksLikeOpenAiKey ? 'openai' : 
 const openai = configuredOpenAiKey && aiProvider === 'openai'
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
-const openaiModel = process.env.OPENAI_MODEL || 'gpt-4s-mini';const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
+const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 const gameCatalog = [
   { id: 'daily-planning', title: 'Plan diario', genres: ['Estudio', 'Trabajo'], platforms: ['PC'], level: ['medio', 'pro'], tag: 'Prioridad', note: 'Organiza tus tareas del dia por prioridad, tiempo estimado y estado de avance.' },
@@ -420,6 +421,14 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
 
 app.use(cors());
 app.use(express.json());
+
+app.get('/', (_req, res) => {
+  res.json({
+    ok: true,
+    app: 'TaskFlow AI backend',
+    health: '/health',
+  });
+});
 
 app.get('/covers/:id.svg', (req, res) => {
   const id = req.params.id.replace('.svg', '');

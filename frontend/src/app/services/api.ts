@@ -1,5 +1,6 @@
 import { HttpClient, HttpHeaders } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
+import { environment } from '../../enviroments/enviroments';
 import { AuthService } from './auth';
 
 export interface TaskRecord {
@@ -60,7 +61,7 @@ export interface DashboardStats {
 export class ApiService {
   private readonly http = inject(HttpClient);
   private readonly auth = inject(AuthService);
-  private readonly baseUrl = 'https://asistente-ai-ur0o.onrender.com';
+  private readonly baseUrl = environment.apiBaseUrl;
 
   private get requestOptions() {
     const uid = this.auth.currentUserId;
