@@ -1,17 +1,23 @@
 require('dotenv').config();
 
-const cors = require('cors');
 const express = require('express');
+const cors = require('cors');
 const OpenAI = require('openai');
 const { admin, db } = require('./firebase');
 
 const app = express();
-const port = process.env.PORT || 3000;
+
 const corsOptions = {
-  origin: '*',
+  origin: 'https://asistente-ai-ur0o.onrender.com',
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 };
+
+app.use(cors(corsOptions));
+app.use(express.json());
+
+const port = process.env.PORT || 3000;
+
 const configuredOpenAiKey = process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_')
   ? process.env.OPENAI_API_KEY
   : '';
