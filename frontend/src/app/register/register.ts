@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, inject } from '@angular/core';
 import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
-import { Router, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { ApiService } from '../services/api';
 import { AuthService } from '../services/auth';
 
@@ -14,6 +14,7 @@ export class Register {
   private readonly fb = inject(FormBuilder);
   private readonly api = inject(ApiService);
   private readonly auth = inject(AuthService);
+  private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly cdr = inject(ChangeDetectorRef);
 
@@ -23,6 +24,7 @@ export class Register {
   editing = false;
   hasProfile = false;
   confirmSaveOpen = false;
+  mode: 'register' | 'profile' = 'register';
 
   form = this.fb.nonNullable.group({
     callsign: ['', [Validators.required, Validators.minLength(3)]],
@@ -37,10 +39,51 @@ export class Register {
     genreStrategy: [false],
   });
 
-  ngOnInit() {
+  private setPasswordRequired(required: boolean) {
+    const password = this.form.controls.password;
+
+    if (required) {
+      password.setValidators([Validators.required, Validators.minLength(6)]);
+    } else {
+      password.clearValidators();
+      password.setValue('');
+    }
+
+    password.updateValueAndValidity();
+  }
+
+  async ngOnInit() {
+    this.mode = this.route.snapshot.routeConfig?.path === 'profile' ? 'profile' : 'register';
+
+    if (this.mode === 'register') {
+      this.hasProfile = false;
+      this.editing = true;
+      this.setPasswordRequired(true);
+      this.cdr.detectChanges();
+      return;
+    }
+
+    const user = await this.auth.waitForAuth();
+
+    if (!user) {
+      this.hasProfile = false;
+      this.editing = true;
+      this.setPasswordRequired(true);
+      this.cdr.detectChanges();
+      return;
+    }
+
     this.api.getProfile().subscribe({
       next: (profile) => {
-        this.hasProfile = true;
+        this.hasProfile = Boolean(profile.id);
+        this.editing = !this.hasProfile;
+        this.setPasswordRequired(!this.hasProfile);
+
+        if (!profile.id) {
+          this.cdr.detectChanges();
+          return;
+        }
+
         this.form.patchValue({
           callsign: profile.callsign,
           email: profile.email,
@@ -52,6 +95,12 @@ export class Register {
           genreSports: profile.genres.includes('Proyectos'),
           genreStrategy: profile.genres.includes('Hogar'),
         });
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.hasProfile = false;
+        this.editing = true;
+        this.setPasswordRequired(true);
         this.cdr.detectChanges();
       },
     });
@@ -108,16 +157,18 @@ export class Register {
     const value = this.form.getRawValue();
     const genres = this.selectedGenres.split(', ').filter((genre) => genre !== 'Sin areas');
 
-    try {
-      await this.auth.register(value.email, value.password);
-    } catch {
-      this.loading = false;
-      this.isError = true;
-      this.message = this.auth.isFirebaseConfigured
-        ? 'No se pudo crear la cuenta. Revisa el correo o usa otra clave.'
-        : 'Falta configurar Firebase web en enviroments.ts para crear usuarios reales.';
-      this.cdr.detectChanges();
-      return;
+    if (this.mode === 'register') {
+      try {
+        await this.auth.register(value.email, value.password);
+      } catch {
+        this.loading = false;
+        this.isError = true;
+        this.message = this.auth.isFirebaseConfigured
+          ? 'No se pudo crear la cuenta. Revisa si Email/Password esta activo en Firebase o si el correo ya existe.'
+          : 'Falta configurar Firebase web en enviroments.ts para crear usuarios reales.';
+        this.cdr.detectChanges();
+        return;
+      }
     }
 
     this.api.updateProfile({
@@ -135,6 +186,7 @@ export class Register {
         this.editing = false;
         this.hasProfile = true;
         this.cdr.detectChanges();
+        await this.router.navigateByUrl('/dashboard');
       },
       error: () => {
         this.loading = false;

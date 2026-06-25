@@ -37,7 +37,7 @@ export class AuthService {
   }
 
   async waitForAuth() {
-    return this.readyPromise;
+    return this.currentUser || this.auth.currentUser || this.readyPromise;
   }
 
   async login(email: string, password: string) {
@@ -62,8 +62,9 @@ export class AuthService {
     return credential.user;
   }
 
-  logout() {
-    return signOut(this.auth);
+  async logout() {
+    await signOut(this.auth);
+    this.currentUser = null;
   }
 
   private ensureConfigured() {

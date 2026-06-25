@@ -136,7 +136,10 @@ export class Asistente implements OnInit {
       },
       error: (error) => {
         this.loading = false;
-        this.status = error?.error?.error || 'No se pudo guardar el mensaje.';
+        const backendMessage = error?.error?.error || '';
+        this.status = isHighDemandError(backendMessage)
+          ? 'La IA esta con alta demanda ahora mismo. Intenta otra vez en unos segundos o reinicia el backend para activar el modo local de respaldo.'
+          : backendMessage || 'No se pudo guardar el mensaje.';
         this.cdr.detectChanges();
       },
     });
@@ -205,4 +208,14 @@ export class Asistente implements OnInit {
 
 function buildLocalTitle(content: string) {
   return content.length > 42 ? `${content.slice(0, 42)}...` : content;
+}
+
+function isHighDemandError(message: string) {
+  const normalized = message.toLowerCase();
+
+  return normalized.includes('high demand') ||
+    normalized.includes('try again later') ||
+    normalized.includes('overloaded') ||
+    normalized.includes('temporarily') ||
+    normalized.includes('resource exhausted');
 }

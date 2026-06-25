@@ -239,35 +239,70 @@ function normalizeChatRole(role) {
 }
 
 async function generateAiAssistantResponse(content, profile, contextMessages) {
-  if (aiProvider === 'gemini') {
-    return generateGeminiAssistantResponse(content, profile, contextMessages);
-  }
+  try {
+    if (aiProvider === 'gemini') {
+      return await generateGeminiAssistantResponse(content, profile, contextMessages);
+    }
 
-  if (!openai) {
-    const error = new Error('OPENAI_API_KEY is not configured');
-    error.status = 500;
-    error.publicMessage = 'Falta configurar OPENAI_API_KEY en el backend.';
+    if (!openai) {
+      const error = new Error('OPENAI_API_KEY is not configured');
+      error.status = 500;
+      error.publicMessage = 'Falta configurar OPENAI_API_KEY en el backend.';
+      throw error;
+    }
+
+    const messages = [
+      { role: 'system', content: buildSystemPrompt(profile) },
+      ...contextMessages.map((message) => ({
+        role: normalizeChatRole(message.role),
+        content: message.content,
+      })),
+      { role: 'user', content },
+    ];
+
+    const completion = await openai.chat.completions.create({
+      model: openaiModel,
+      messages,
+      temperature: 0.7,
+      max_tokens: 650,
+    });
+
+    return completion.choices?.[0]?.message?.content?.trim() ||
+      buildAssistantResponse(content, profile, contextMessages);
+  } catch (error) {
+    if (shouldUseLocalFallback(error)) {
+      return `${buildAssistantResponse(content, profile, contextMessages)}\n\nNota: el modelo de IA esta con alta demanda ahora mismo, asi que use una respuesta local de respaldo para que puedas continuar.`;
+    }
+
     throw error;
   }
+}
 
-  const messages = [
-    { role: 'system', content: buildSystemPrompt(profile) },
-    ...contextMessages.map((message) => ({
-      role: normalizeChatRole(message.role),
-      content: message.content,
-    })),
-    { role: 'user', content },
-  ];
+function shouldUseLocalFallback(error) {
+  const message = `${error?.message || ''} ${error?.publicMessage || ''}`.toLowerCase();
+  const isMissingKey =
+    message.includes('api_key is not configured') ||
+    message.includes('falta configurar');
+  const isInvalidKey =
+    message.includes('api key not valid') ||
+    message.includes('invalid api key') ||
+    message.includes('permission denied') ||
+    message.includes('unauthorized');
 
-  const completion = await openai.chat.completions.create({
-    model: openaiModel,
-    messages,
-    temperature: 0.7,
-    max_tokens: 650,
-  });
+  if (isMissingKey || isInvalidKey) {
+    return false;
+  }
 
-  return completion.choices?.[0]?.message?.content?.trim() ||
-    buildAssistantResponse(content, profile, contextMessages);
+  return [408, 429, 500, 502, 503, 504].includes(error?.status) ||
+    message.includes('high demand') ||
+    message.includes('overloaded') ||
+    message.includes('temporarily') ||
+    message.includes('try again later') ||
+    message.includes('unavailable') ||
+    message.includes('model is currently') ||
+    message.includes('rate limit') ||
+    message.includes('quota') ||
+    message.includes('resource exhausted');
 }
 
 function toGeminiRole(role) {

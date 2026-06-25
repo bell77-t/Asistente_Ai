@@ -1,13 +1,15 @@
 ﻿<main class="register-page page-shell">
   <div class="scanline"></div>
-  <header class="profile-nav panel">
-    <h1 class="brand-title">TaskFlow AI</h1>
-    <nav>
-      <a routerLink="/dashboard">Dashboard</a>
-      <a routerLink="/asistente">Asistente IA</a>
-      <a routerLink="/register" class="active">Perfil</a>
-    </nav>
-  </header>
+  @if (mode === 'profile') {
+    <header class="profile-nav panel">
+      <h1 class="brand-title">TaskFlow AI</h1>
+      <nav>
+        <a routerLink="/dashboard">Dashboard</a>
+        <a routerLink="/asistente">Asistente IA</a>
+        <a routerLink="/profile" class="active">Perfil</a>
+      </nav>
+    </header>
+  }
   <section class="profile-layout">
     <aside class="panel profile-side">
       <span class="eyebrow">Perfil de organizacion</span>
@@ -23,11 +25,11 @@
   <section class="panel register-card">
     <div class="register-header">
       <span class="eyebrow">Perfil de usuario</span>
-      <h1 class="brand-title">{{ hasProfile ? 'Tu perfil de tareas' : 'Crea tu cuenta' }}</h1>
+      <h1 class="brand-title">{{ mode === 'profile' && hasProfile ? 'Tu perfil de tareas' : 'Crea tu cuenta' }}</h1>
       <p class="lead">Ajusta tu nivel, herramienta y areas de enfoque para personalizar el dashboard y el chat de IA.</p>
     </div>
 
-    @if (hasProfile && !editing) {
+    @if (mode === 'profile' && hasProfile && !editing) {
       <div class="profile-summary">
         <div>
           <span>Nombre</span>
@@ -49,7 +51,7 @@
       <button class="primary-button" type="button" (click)="toggleEdit()">Editar informacion</button>
     }
 
-    @if (!hasProfile || editing) {
+    @if (mode === 'register' || !hasProfile || editing) {
     <form [formGroup]="form" (ngSubmit)="requestSave()">
       <div class="field">
         <label for="callsign">Nombre</label>
@@ -59,10 +61,12 @@
         <label for="email">Correo</label>
         <input id="email" type="email" formControlName="email" placeholder="correo@ejemplo.com" />
       </div>
-      <div class="field">
-        <label for="password">Clave</label>
-        <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
-      </div>
+      @if (mode === 'register') {
+        <div class="field">
+          <label for="password">Clave</label>
+          <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
+        </div>
+      }
       <div class="field">
         <label for="level">Nivel de organizacion</label>
         <select id="level" formControlName="level">
@@ -90,7 +94,7 @@
         </div>
       </div>
       <button class="primary-button" type="submit" [disabled]="loading">
-        {{ loading ? 'Guardando Perfil...' : 'Guardar Perfil de tareas' }}
+        {{ loading ? 'Guardando...' : (mode === 'register' ? 'Crear cuenta' : 'Guardar perfil') }}
       </button>
     </form>
     }
@@ -98,7 +102,7 @@
     @if (message) {
       <p class="status" [class.error]="isError" [class.ok]="!isError">{{ message }}</p>
     }
-    <p class="status"><a routerLink="/dashboard">Volver al dashboard</a></p>
+    <p class="status"><a [routerLink]="mode === 'register' ? '/login' : '/dashboard'">{{ mode === 'register' ? 'Volver al login' : 'Volver al dashboard' }}</a></p>
   </section>
   </section>
 

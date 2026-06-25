@@ -20,6 +20,11 @@ export const routes: Routes = [
     component: Register
   },
   {
+    path: 'profile',
+    component: Register,
+    canActivate: [authGuard]
+  },
+  {
     path: 'dashboard',
     component: Dashboard,
     canActivate: [authGuard]
