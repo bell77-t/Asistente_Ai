@@ -419,25 +419,21 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
 }
 
 const allowedOrigins = [
-  'http://localhost:4200', // Si lo pruebas localmente en Angular
-  'http://localhost:3000',
-  'https://asistente-ai-ur0o.onrender.com' // ¡Tu URL exacta de frontend en Render!
+  'http://localhost:4200',
+  'https://asistente-ai-ur0o.onrender.com' // ¡Tu dominio frontend exacto!
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite solicitudes sin origen (como aplicaciones móviles o curl local)
-    if (!origin) return callback(null, true);
-
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'El acceso a este sitio está bloqueado por la política de CORS (CORS Policy).';
-      return callback(new Error(msg), false);
+    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      callback(new Error('Bloqueado por la política de CORS'));
     }
-    return callback(null, true);
   },
   credentials: true,
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization,x-user-id'
+  methods: 'GET,POST,PUT,PATCH,DELETE,OPTIONS',
+  allowedHeaders: 'Content-Type,Authorization,x-user-id'
 }));
 app.use(express.json());
 
