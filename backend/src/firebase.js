@@ -89,9 +89,6 @@ if (!admin.apps.length) {
         serviceAccount.private_key = pk;
 
         // DEBUG SEGURO: Verificamos el formato sin exponer toda tu clave secreta
-        console.log('[DEBUG] ¿Tiene saltos reales?', pk.includes('\n'));
-        console.log('[DEBUG] ¿Aún tiene \\n literal?', pk.includes('\\n'));
-        console.log('[DEBUG] Inicio de la clave:', pk.substring(0, 35));
       }
 
       admin.initializeApp({
