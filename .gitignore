@@ -1,5 +1,5 @@
 # Private credentials
-backend/firebaseKey.json
+backend/firebaseLLave.json
 backend/.env
 
 # Dependencies and builds
