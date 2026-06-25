@@ -12,36 +12,25 @@ for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'http
 // 2. Función robusta para obtener la cuenta de servicio
 function getServiceAccount() {
   // Opción A: Leer desde la variable web de Render (en texto plano o Base64)
+  // Opción A: Leer desde la variable web de Render (en texto plano o Base64)
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
     const raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
     if (!raw) return null;
 
-    const candidates = [raw, raw.replace(/\\n/g, '\n'), raw.replace(/\r/g, '')];
-
-    for (const candidate of candidates) {
-      try {
-        // CORRECCIÓN: Quitamos el replace de caracteres de control
-        const sanitized = candidate
-          .replace(/\\n/g, '\n')
-          .replace(/\r/g, '');
-
-        const parsed = JSON.parse(sanitized);
-        if (parsed.client_email && parsed.private_key) {
-          return parsed;
-        }
-      } catch (error) {
-        // Intenta decodificar abajo si no es JSON directo
+    // 1. Intentar parsear como texto plano directo
+    try {
+      const parsed = JSON.parse(raw);
+      if (parsed.client_email && parsed.private_key) {
+        return parsed;
       }
+    } catch (error) {
+      // Falla silenciosamente y pasa al intento con Base64
     }
 
+    // 2. Intentar parsear asumiendo que está en Base64
     try {
       const decoded = Buffer.from(raw, 'base64').toString('utf8');
-      // CORRECCIÓN: Quitamos el replace de caracteres de control
-      const sanitized = decoded
-        .replace(/\\n/g, '\n')
-        .replace(/\r/g, '');
-        
-      const parsed = JSON.parse(sanitized);
+      const parsed = JSON.parse(decoded);
 
       if (parsed.client_email && parsed.private_key) {
         return parsed;
