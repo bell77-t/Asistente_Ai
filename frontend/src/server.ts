@@ -10,7 +10,13 @@ import { join } from 'node:path';
 const browserDistFolder = join(import.meta.dirname, '../browser');
 
 const app = express();
-const angularApp = new AngularNodeAppEngine();
+app.set('trust proxy', true);
+const angularApp = new AngularNodeAppEngine({
+  // Permite confiar en las cabeceras del proxy de Render
+  trustProxyHeaders: true, 
+  // Agrega tu dominio de Render a la lista blanca de hosts permitidos
+  allowedHosts: ['asistente-ai-ur0o.onrender.com']
+});
 
 /**
  * Example Express Rest API endpoints can be defined here.

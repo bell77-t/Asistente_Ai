@@ -81,7 +81,7 @@ function getServiceAccount() {
 }
 
 // 3. Inicialización única y segura de Firebase Admin
-// 3. Inicialización única y segura de Firebase Admin
+/// 3. Inicialización única y segura de Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = getServiceAccount();
@@ -89,9 +89,19 @@ if (!admin.apps.length) {
     if (serviceAccount) {
       console.log('[firebase] Inicializando con credenciales detectadas (variable web o archivo local).');
       
-      // LA CORRECCIÓN: Forzar los saltos de línea reales en la clave privada
       if (serviceAccount.private_key) {
-        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+        // Limpieza agresiva: quita comillas dobles al inicio/fin y arregla múltiples niveles de escape
+        let pk = serviceAccount.private_key;
+        pk = pk.replace(/^"|"$/g, ''); // Quitar comillas si las tiene a los extremos
+        pk = pk.replace(/\\\\n/g, '\n'); // Arreglar doble escape (\\n)
+        pk = pk.replace(/\\n/g, '\n');   // Arreglar escape simple (\n)
+        
+        serviceAccount.private_key = pk;
+
+        // DEBUG SEGURO: Verificamos el formato sin exponer toda tu clave secreta
+        console.log('[DEBUG] ¿Tiene saltos reales?', pk.includes('\n'));
+        console.log('[DEBUG] ¿Aún tiene \\n literal?', pk.includes('\\n'));
+        console.log('[DEBUG] Inicio de la clave:', pk.substring(0, 35));
       }
 
       admin.initializeApp({
@@ -99,7 +109,7 @@ if (!admin.apps.length) {
       });
     } else {
       const projectId = process.env.FIREBASE_PROJECT_ID || process.env.GOOGLE_CLOUD_PROJECT || 'local-project';
-      console.warn('[firebase] No se encontraron credenciales válidas; iniciando Firebase Admin sin credenciales.');
+      console.warn('[firebase] No se encontraron credenciales válidas; iniciando sin credenciales.');
       admin.initializeApp({ projectId });
     }
   } catch (error) {
