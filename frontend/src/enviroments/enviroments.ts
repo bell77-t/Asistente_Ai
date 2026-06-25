@@ -1,5 +1,5 @@
 ﻿export const environment = {
-  apiBaseUrl: "https://asistente-ai-backend.onrender.com",
+  apiBaseUrl: "https://asistente-ai-1.onrender.com",
   firebase: {
     apiKey: "AIzaSyDUdAYwKZMCt3wP3Ypu3sxl1ci-aVFjFjQ",
     authDomain: "asistenteai-e3530.firebaseapp.com",
