@@ -9,12 +9,19 @@ for (const key of ['HTTP_PROXY', 'HTTPS_PROXY', 'ALL_PROXY', 'http_proxy', 'http
 
 function getServiceAccount() {
   if (process.env.FIREBASE_SERVICE_ACCOUNT) {
-    const raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
-    const json = raw.startsWith('{')
-      ? raw
-      : Buffer.from(raw, 'base64').toString('utf8');
+    let raw = process.env.FIREBASE_SERVICE_ACCOUNT.trim();
+    
+    // Si la cadena está en base64 la decodificamos, si es JSON plano lo dejamos tal cual
+    const isJson = raw.startsWith('{');
+    const jsonString = isJson ? raw : Buffer.from(raw, 'base64').toString('utf8');
 
-    return JSON.parse(json.replace(/\\n/g, '\n'));
+    // Limpieza profunda y estricta de caracteres de control para evitar el SyntaxError
+    const sanitized = jsonString
+      .replace(/\\n/g, '\n')
+      .replace(/\r/g, '')
+      .replace(/[\u0000-\u0019]+/g, ""); 
+
+    return JSON.parse(sanitized);
   }
 
   const credentialsPath = process.env.GOOGLE_APPLICATION_CREDENTIALS || './firebaseKey.json';
