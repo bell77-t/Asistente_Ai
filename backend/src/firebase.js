@@ -81,12 +81,19 @@ function getServiceAccount() {
 }
 
 // 3. Inicialización única y segura de Firebase Admin
+// 3. Inicialización única y segura de Firebase Admin
 if (!admin.apps.length) {
   try {
     const serviceAccount = getServiceAccount();
 
     if (serviceAccount) {
       console.log('[firebase] Inicializando con credenciales detectadas (variable web o archivo local).');
+      
+      // LA CORRECCIÓN: Forzar los saltos de línea reales en la clave privada
+      if (serviceAccount.private_key) {
+        serviceAccount.private_key = serviceAccount.private_key.replace(/\\n/g, '\n');
+      }
+
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
