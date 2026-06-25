@@ -27,7 +27,7 @@ const aiProvider = (process.env.AI_PROVIDER || (looksLikeOpenAiKey ? 'openai' : 
 const openai = configuredOpenAiKey && aiProvider === 'openai'
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
-const openaiModel = process.env.OPENAI_MODEL || 'gpt-4s-mini';const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4s-mini';const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash';
 
 const gameCatalog = [
   { id: 'daily-planning', title: 'Plan diario', genres: ['Estudio', 'Trabajo'], platforms: ['PC'], level: ['medio', 'pro'], tag: 'Prioridad', note: 'Organiza tus tareas del dia por prioridad, tiempo estimado y estado de avance.' },
