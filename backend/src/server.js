@@ -7,6 +7,11 @@ const { admin, db } = require('./firebase');
 
 const app = express();
 const port = process.env.PORT || 3000;
+const corsOptions = {
+  origin: '*',
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-User-Id'],
+};
 const configuredOpenAiKey = process.env.OPENAI_API_KEY && !process.env.OPENAI_API_KEY.includes('your_')
   ? process.env.OPENAI_API_KEY
   : '';
@@ -419,26 +424,39 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
 }
 
 const allowedOrigins = [
-  'http://localhost:4200', // Si lo pruebas localmente en Angular
+  'http://localhost:4200',
   'http://localhost:3000',
-  'https://asistente-ai-ur0o.onrender.com' // ¡Tu URL exacta de frontend en Render!
+  'http://localhost:4201',
+  'https://asistente-ai-ur0o.onrender.com',
+  'https://asistente-ai-ur0o.onrender.com/',
+  'https://asistente-ai-ur0o.onrender.com/*',
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Permite solicitudes sin origen (como aplicaciones móviles o curl local)
     if (!origin) return callback(null, true);
 
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'El acceso a este sitio está bloqueado por la política de CORS (CORS Policy).';
-      return callback(new Error(msg), false);
+    if (allowedOrigins.includes(origin) || origin.endsWith('.onrender.com')) {
+      return callback(null, true);
     }
+
     return callback(null, true);
   },
   credentials: true,
-  methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
-  allowedHeaders: 'Origin,X-Requested-With,Content-Type,Accept,Authorization,x-user-id'
+  methods: ['GET', 'HEAD', 'PUT', 'PATCH', 'POST', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Origin', 'X-Requested-With', 'Content-Type', 'Accept', 'Authorization', 'x-user-id'],
 }));
+app.use((req, res, next) => {
+  if (req.method === 'OPTIONS') {
+    res.header('Access-Control-Allow-Origin', req.headers.origin || '*');
+    res.header('Access-Control-Allow-Methods', 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization, x-user-id');
+    res.header('Access-Control-Allow-Credentials', 'true');
+    return res.sendStatus(204);
+  }
+
+  next();
+});
 app.use(express.json());
 
 app.get('/', (_req, res) => {
