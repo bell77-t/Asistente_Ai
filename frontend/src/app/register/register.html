@@ -12,21 +12,16 @@
   }
   <section class="profile-layout">
     <aside class="panel profile-side">
-      <span class="eyebrow">Perfil de organizacion</span>
+      <span class="eyebrow">Cuenta de tareas</span>
       <h2>{{ form.controls.callsign.value || 'Usuario' }}</h2>
       <p>Cuenta para gestionar tareas y recibir ayuda de IA.</p>
-      <div class="profile-tags">
-        @for (genre of selectedGenres.split(', '); track genre) {
-          <span>{{ genre }}</span>
-        }
-      </div>
     </aside>
 
   <section class="panel register-card">
     <div class="register-header">
-      <span class="eyebrow">Perfil de usuario</span>
-      <h1 class="brand-title">{{ mode === 'profile' && hasProfile ? 'Tu perfil de tareas' : 'Crea tu cuenta' }}</h1>
-      <p class="lead">Ajusta tu nivel, herramienta y areas de enfoque para personalizar el dashboard y el chat de IA.</p>
+      <span class="eyebrow">{{ mode === 'profile' ? 'Perfil' : 'Registro' }}</span>
+      <h1 class="brand-title">{{ mode === 'profile' ? 'Perfil de tareas' : 'Registro de usuario' }}</h1>
+      <p class="lead">{{ mode === 'profile' ? 'Administra la informacion asociada a tus tareas y a las respuestas del asistente.' : 'Registra tu usuario para ingresar al aplicativo.' }}</p>
     </div>
 
     @if (mode === 'profile' && hasProfile && !editing) {
@@ -41,11 +36,11 @@
             <td>{{ form.controls.email.value || 'Sin correo' }}</td>
           </tr>
           <tr>
-            <th>Nivel</th>
+            <th>Tipo de usuario</th>
             <td>{{ form.controls.level.value }}</td>
           </tr>
           <tr>
-            <th>Dispositivo</th>
+            <th>Uso principal</th>
             <td>{{ form.controls.platform.value }}</td>
           </tr>
           <tr>
@@ -54,7 +49,16 @@
           </tr>
         </tbody>
       </table>
-      <button class="primary-button" type="button" (click)="toggleEdit()">Editar informacion</button>
+      <div class="profile-actions">
+        <button class="primary-button" type="button" (click)="toggleEdit()">Editar perfil</button>
+        <button class="secondary-button danger-action" type="button" (click)="requestDeleteProfile()">Eliminar cuenta</button>
+      </div>
+    }
+
+    @if (mode === 'profile' && (!hasProfile || editing)) {
+      <div class="profile-actions profile-actions--secondary">
+        <button class="secondary-button danger-action" type="button" (click)="requestDeleteProfile()">Eliminar cuenta</button>
+      </div>
     }
 
     @if (mode === 'register' || !hasProfile || editing) {
@@ -70,23 +74,28 @@
       @if (mode === 'register') {
         <div class="field">
           <label for="password">Clave</label>
-          <input id="password" type="password" formControlName="password" placeholder="Minimo 6 caracteres" />
+          <div class="password-input-wrapper">
+            <input id="password" [type]="passwordVisible ? 'text' : 'password'" formControlName="password" placeholder="Minimo 6 caracteres" />
+            <button class="password-toggle" type="button" (click)="togglePasswordVisibility()" [attr.aria-label]="passwordVisible ? 'Ocultar contraseña' : 'Mostrar contraseña'">
+              {{ passwordVisible ? 'Ocultar' : 'Mostrar' }}
+            </button>
+          </div>
         </div>
       }
       <div class="field">
-        <label for="level">Nivel de organizacion</label>
+        <label for="level">Tipo de usuario</label>
         <select id="level" formControlName="level">
-          <option value="principiante">Principiante</option>
-          <option value="medio">Medio</option>
-          <option value="pro">Pro</option>
+          <option value="principiante">Aprendiz</option>
+          <option value="medio">Usuario frecuente</option>
+          <option value="pro">Administrador de tareas</option>
         </select>
       </div>
       <div class="field">
-        <label for="platform">Dispositivo de trabajo</label>
+        <label for="platform">Uso principal del aplicativo</label>
         <select id="platform" formControlName="platform">
-          <option value="PC">Computador</option>
-          <option value="consola">Otro dispositivo</option>
-          <option value="movil">Movil</option>
+          <option value="Tareas academicas">Tareas academicas</option>
+          <option value="Tareas laborales">Tareas laborales</option>
+          <option value="Tareas personales">Tareas personales</option>
         </select>
       </div>
       <div class="field">
@@ -117,10 +126,24 @@
       <div class="confirm-dialog panel">
         <span class="eyebrow">Confirmar cambios</span>
         <h2>Guardar Perfil de tareas</h2>
-        <p>El dashboard y el chat se personalizaran con nivel {{ form.controls.level.value }}, plataforma {{ form.controls.platform.value }} y areas {{ selectedGenres }}.</p>
+        <p>El dashboard y el chat se personalizaran con tipo de usuario {{ form.controls.level.value }}, uso principal {{ form.controls.platform.value }} y areas {{ selectedGenres }}.</p>
         <div class="confirm-actions">
           <button class="secondary-button" type="button" (click)="cancelSave()">Cancelar</button>
           <button class="primary-button" type="button" (click)="submit()">Confirmar y guardar</button>
+        </div>
+      </div>
+    </section>
+  }
+
+  @if (confirmDeleteOpen) {
+    <section class="confirm-backdrop">
+      <div class="confirm-dialog panel">
+        <span class="eyebrow">Eliminar cuenta</span>
+        <h2>Eliminar tu cuenta y tus datos</h2>
+        <p>Se eliminará tu cuenta, tu perfil y todos tus datos de tareas y chats asociados. Esta acción no se puede deshacer.</p>
+        <div class="confirm-actions">
+          <button class="secondary-button" type="button" (click)="cancelDeleteProfile()">Cancelar</button>
+          <button class="primary-button" type="button" (click)="deleteProfile()">Eliminar cuenta</button>
         </div>
       </div>
     </section>

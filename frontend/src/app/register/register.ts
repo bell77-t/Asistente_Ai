@@ -24,14 +24,16 @@ export class Register {
   editing = false;
   hasProfile = false;
   confirmSaveOpen = false;
+  confirmDeleteOpen = false;
   mode: 'register' | 'profile' = 'register';
+  passwordVisible = false;
 
   form = this.fb.nonNullable.group({
     callsign: ['', [Validators.required, Validators.minLength(3)]],
     email: ['', [Validators.required, Validators.email]],
     password: ['', [Validators.required, Validators.minLength(6)]],
     level: ['principiante', Validators.required],
-    platform: ['PC', Validators.required],
+    platform: ['Tareas academicas', Validators.required],
     genreFps: [true],
     genreRpg: [true],
     genreMoba: [false],
@@ -111,6 +113,11 @@ export class Register {
     this.cdr.detectChanges();
   }
 
+  togglePasswordVisibility() {
+    this.passwordVisible = !this.passwordVisible;
+    this.cdr.detectChanges();
+  }
+
   get selectedGenres() {
     const value = this.form.getRawValue();
 
@@ -138,6 +145,53 @@ export class Register {
   cancelSave() {
     this.confirmSaveOpen = false;
     this.cdr.detectChanges();
+  }
+
+  requestDeleteProfile() {
+    this.confirmDeleteOpen = true;
+    this.cdr.detectChanges();
+  }
+
+  cancelDeleteProfile() {
+    this.confirmDeleteOpen = false;
+    this.cdr.detectChanges();
+  }
+
+  deleteProfile() {
+    this.confirmDeleteOpen = false;
+    this.loading = true;
+    this.message = '';
+    this.isError = false;
+
+    this.api.deleteProfile().subscribe({
+      next: async () => {
+        this.loading = false;
+        this.hasProfile = false;
+        this.editing = true;
+        this.message = 'Cuenta eliminada correctamente. Tu sesión ha finalizado.';
+        this.form.patchValue({
+          callsign: '',
+          email: this.auth.currentUser?.email || '',
+          level: 'principiante',
+          platform: 'Tareas academicas',
+          genreFps: true,
+          genreRpg: true,
+          genreMoba: false,
+          genreSports: false,
+          genreStrategy: false,
+        });
+        this.setPasswordRequired(false);
+        this.cdr.detectChanges();
+        await this.auth.logout();
+        await this.router.navigateByUrl('/login');
+      },
+      error: () => {
+        this.loading = false;
+        this.isError = true;
+        this.message = 'No se pudo eliminar la cuenta. Verifica el backend y tu conexión.';
+        this.cdr.detectChanges();
+      },
+    });
   }
 
   async submit() {
@@ -176,16 +230,23 @@ export class Register {
       email: value.email,
       level: value.level as 'principiante' | 'medio' | 'pro',
       genres,
-      platform: value.platform as 'PC' | 'consola' | 'movil',
+      platform: value.platform as 'Tareas academicas' | 'Tareas laborales' | 'Tareas personales',
     }).subscribe({
       next: async () => {
-        if (!this.message) {
-          this.message = 'Perfil de tareas actualizado en Firestore.';
-        }
+        this.message = this.mode === 'register'
+          ? 'Cuenta creada. Revisa tu correo y confirma la verificacion antes de iniciar sesion.'
+          : 'Perfil de tareas actualizado en Firestore.';
         this.loading = false;
         this.editing = false;
         this.hasProfile = true;
         this.cdr.detectChanges();
+
+        if (this.mode === 'register') {
+          await this.auth.logout();
+          await this.router.navigateByUrl('/login');
+          return;
+        }
+
         await this.router.navigateByUrl('/dashboard');
       },
       error: () => {

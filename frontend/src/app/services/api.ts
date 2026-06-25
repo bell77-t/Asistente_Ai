@@ -40,7 +40,7 @@ export interface UserProfile {
   rank?: string;
   level: 'principiante' | 'medio' | 'pro';
   genres: string[];
-  platform: 'PC' | 'consola' | 'movil';
+  platform: 'Tareas academicas' | 'Tareas laborales' | 'Tareas personales' | 'PC' | 'consola' | 'movil';
   createdAt?: unknown;
 }
 
@@ -98,6 +98,10 @@ export class ApiService {
 
   updateProfile(payload: Omit<UserProfile, 'id' | 'createdAt' | 'rank'> & { rank?: string }) {
     return this.http.put<UserProfile>(`${this.baseUrl}/profile`, payload, this.requestOptions);
+  }
+
+  deleteProfile() {
+    return this.http.delete<void>(`${this.baseUrl}/account`, this.requestOptions);
   }
 
   getProfiles() {

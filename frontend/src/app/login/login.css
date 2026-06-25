@@ -117,6 +117,33 @@ form {
   margin-top: 24px;
 }
 
+.password-input-wrapper {
+  position: relative;
+}
+
+.password-input-wrapper input {
+  width: 100%;
+  padding-right: 86px;
+}
+
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 10px;
+  transform: translateY(-50%);
+  border: 0;
+  background: transparent;
+  color: #00f2ff;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 4px 6px;
+}
+
+.password-toggle:hover {
+  color: #e1fdff;
+}
+
 a {
   color: #00f2ff;
   font-weight: 800;

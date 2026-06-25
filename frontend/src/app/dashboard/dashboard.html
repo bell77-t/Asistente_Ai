@@ -18,7 +18,7 @@
       <div>
         <span class="eyebrow">Command center</span>
         <h2 class="brand-title">Dashboard</h2>
-        <p>{{ profile?.callsign || 'Usuario' }} · {{ profile?.level || 'principiante' }} · {{ profile?.platform || 'PC' }} · {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
+        <p>{{ profile?.callsign || 'Usuario' }} · {{ profile?.level || 'principiante' }} · {{ profile?.platform || 'Tareas academicas' }} · {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
       </div>
       <button class="icon-action" type="button" title="Actualizar dashboard" aria-label="Actualizar dashboard" (click)="refreshDashboard()">
         <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -32,7 +32,7 @@
       <article class="panel metric">
         <span class="eyebrow">Perfil</span>
         <strong>{{ profile?.level || 'OK' }}</strong>
-        <p>{{ profile?.platform || 'PC' }} - {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
+        <p>{{ profile?.platform || 'Tareas academicas' }} - {{ profile?.genres?.join(', ') || 'Trabajo, Estudio' }}</p>
       </article>
       <article class="panel metric">
         <span class="eyebrow">Tareas</span>

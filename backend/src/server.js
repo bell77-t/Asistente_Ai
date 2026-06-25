@@ -3,7 +3,7 @@ require('dotenv').config();
 const cors = require('cors');
 const express = require('express');
 const OpenAI = require('openai');
-const { db } = require('./firebase');
+const { admin, db } = require('./firebase');
 
 const app = express();
 const port = process.env.PORT || 3000;
@@ -16,8 +16,7 @@ const aiProvider = (process.env.AI_PROVIDER || (looksLikeOpenAiKey ? 'openai' : 
 const openai = configuredOpenAiKey && aiProvider === 'openai'
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
   : null;
-const openaiModel = process.env.OPENAI_MODEL || 'gpt-4.1-mini';
-const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
+const openaiModel = process.env.OPENAI_MODEL || 'gpt-4s-mini';const geminiModel = process.env.GEMINI_MODEL || 'gemini-2.5-flash-lite';
 
 const gameCatalog = [
   { id: 'daily-planning', title: 'Plan diario', genres: ['Estudio', 'Trabajo'], platforms: ['PC'], level: ['medio', 'pro'], tag: 'Prioridad', note: 'Organiza tus tareas del dia por prioridad, tiempo estimado y estado de avance.' },
@@ -76,13 +75,19 @@ function normalizeProfile(profile = {}) {
   const level = (profile.level || profile.rank || 'principiante').toString().toLowerCase();
   const normalizedLevel = level === 'elite' ? 'pro' : level === 'beginner' ? 'principiante' : level === 'intermediate' ? 'medio' : level;
   const genres = Array.isArray(profile.genres) && profile.genres.length ? profile.genres : ['Trabajo', 'Estudio'];
+  const platformAliases = {
+    PC: 'Tareas academicas',
+    consola: 'Tareas laborales',
+    movil: 'Tareas personales',
+  };
+  const platform = platformAliases[profile.platform] || profile.platform || 'Tareas academicas';
 
   return {
     callsign: profile.callsign || 'Usuario',
     email: profile.email || 'usuario@taskflow.ai',
     level: ['principiante', 'medio', 'pro'].includes(normalizedLevel) ? normalizedLevel : 'principiante',
     genres,
-    platform: profile.platform || 'PC',
+    platform,
   };
 }
 
@@ -101,6 +106,22 @@ async function getUserDocs(collectionName, userId) {
     id: doc.id,
     ...doc.data(),
   }));
+}
+
+async function deleteUserData(userId) {
+  const collectionsToClean = ['tasks', 'messages', 'profiles', 'conversations', 'sessions'];
+
+  for (const collectionName of collectionsToClean) {
+    const snapshot = await db.collection(collectionName).where('userId', '==', userId).get();
+
+    if (snapshot.empty) {
+      continue;
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach((doc) => batch.delete(doc.ref));
+    await batch.commit();
+  }
 }
 
 async function getActiveProfile(userId = 'anonymous') {
@@ -166,7 +187,7 @@ function tipsForProfile(profile) {
   return gamingTips[normalizeProfile(profile).level] || gamingTips.principiante;
 }
 
-function buildAssistantResponse(content, profile, contextMessages) {
+function buildAssistantResponse(content, profile, contextMessages, tasks = []) {
   const normalized = normalizeProfile(profile);
   const lower = content.toLowerCase();
   const contextHint = contextMessages.length
@@ -179,10 +200,18 @@ function buildAssistantResponse(content, profile, contextMessages) {
   }[normalized.level];
 
   if (lower.includes('prioridad') || lower.includes('priorizar') || lower.includes('urgente')) {
+    if (tasks.length) {
+      return `${contextHint}${levelHint} De tus tareas guardadas, empieza por estas: ${summarizeTasksForLocalResponse(tasks)}. Mi recomendacion es atender primero las de prioridad alta y fecha limite mas cercana, luego dividir cada una en pasos de 25 a 45 minutos.`;
+    }
+
     return `${contextHint}${levelHint} Clasifica tus tareas en urgente/importante, importante/no urgente, urgente/no importante y descartable. Luego elige maximo tres prioridades para hoy.`;
   }
 
   if (lower.includes('plan') || lower.includes('organiza') || lower.includes('agenda')) {
+    if (tasks.length) {
+      return `${contextHint}${levelHint} Plan sugerido con tus tareas guardadas: ${summarizeTasksForLocalResponse(tasks)}. Ordenalas por fecha limite, bloquea tiempo para la primera tarea pendiente y deja una revision corta al final del dia.`;
+    }
+
     return `${contextHint}${levelHint} Propongo este flujo: 1) lista todas las tareas, 2) define fecha limite, 3) estima duracion, 4) separa en bloques de trabajo, 5) revisa avances al final del dia.`;
   }
 
@@ -190,7 +219,20 @@ function buildAssistantResponse(content, profile, contextMessages) {
     return `${contextHint}${levelHint} Extrae acuerdos, responsables, fechas y siguientes pasos. Si me pasas el texto, lo convierto en una lista de tareas accionables.`;
   }
 
+  if (tasks.length) {
+    return `${contextHint}${levelHint} Vi estas tareas guardadas: ${summarizeTasksForLocalResponse(tasks)}. Puedes pedirme: "prioriza mis tareas", "hazme un plan para hoy" o "resume mis pendientes".`;
+  }
+
   return `${contextHint}${levelHint} Puedo ayudarte a crear tareas, priorizarlas, dividir proyectos, resumir solicitudes, planear una agenda y dar seguimiento. Dime que pendiente tienes, fecha limite y nivel de prioridad.`;
+}
+
+function summarizeTasksForLocalResponse(tasks = []) {
+  return tasks.slice(0, 5).map((task) => {
+    const status = task.status || (task.completed ? 'completada' : 'pendiente');
+    const due = task.dueDate ? `, vence ${task.dueDate}${task.dueTime ? ` ${task.dueTime}` : ''}` : '';
+
+    return `"${task.title}" (${status}, prioridad ${task.priority || 'media'}${due})`;
+  }).join('; ');
 }
 const taskKeywords = [
   'tarea', 'tareas', 'pendiente', 'pendientes', 'actividad', 'actividades', 'recordatorio', 'recordatorios',
@@ -227,8 +269,8 @@ function buildSystemPrompt(profile, tasks = []) {
     'Responde siempre en espanol claro, natural y util.',
     'Ayudas a crear, dividir, priorizar, resumir, reprogramar y dar seguimiento a tareas y proyectos.',
     'Mantienes el contexto de la conversacion y haces preguntas cortas cuando falte informacion clave.',
-    `Nivel de organizacion: ${normalized.level}.`,
-    `Herramienta principal: ${normalized.platform}.`,
+    `Tipo de usuario: ${normalized.level}.`,
+    `Uso principal del aplicativo: ${normalized.platform}.`,
     `Areas de enfoque: ${normalized.genres.join(', ')}.`,
     'Adapta la profundidad: principiante = paso a paso, medio = practico y priorizado, pro = directo, optimizado y tecnico.',
     'Evita inventar fechas, responsables o datos no dados; si faltan detalles, pregunta por prioridad, plazo o contexto.',
@@ -290,7 +332,7 @@ async function generateAiAssistantResponse(content, profile, contextMessages, ta
     });
 
     return completion.choices?.[0]?.message?.content?.trim() ||
-      buildAssistantResponse(content, profile, contextMessages);
+      buildAssistantResponse(content, profile, contextMessages, tasks);
   } catch (error) {
     console.warn('AI provider unavailable, using local fallback:', {
       provider: aiProvider,
@@ -300,7 +342,7 @@ async function generateAiAssistantResponse(content, profile, contextMessages, ta
     });
 
     const reason = buildAiFallbackReason(error);
-    return `${buildAssistantResponse(content, profile, contextMessages)}\n\nNota: ${reason} Use una respuesta local de respaldo para que el chat siga funcionando.`;
+    return `${buildAssistantResponse(content, profile, contextMessages, tasks)}\n\nNota: ${reason} Use una respuesta local de respaldo para que el chat siga funcionando.`;
   }
 }
 
@@ -568,7 +610,7 @@ app.delete('/tasks/:id', async (req, res, next) => {
 
 app.post('/profiles', async (req, res, next) => {
   try {
-    const { callsign, email, rank, level, genres = [], platform = 'PC' } = req.body;
+    const { callsign, email, rank, level, genres = [], platform = 'Tareas academicas' } = req.body;
     const userId = getUserId(req);
 
     if (!callsign || !email) {
@@ -633,6 +675,35 @@ app.put('/profile', async (req, res, next) => {
     next(error);
   }
 });
+
+async function deleteAccountHandler(req, res, next) {
+  try {
+    const userId = getUserId(req);
+
+    if (!userId || userId === 'anonymous') {
+      return res.status(400).json({ error: 'Missing authenticated user' });
+    }
+
+    await deleteUserData(userId);
+
+    try {
+      await admin.auth().deleteUser(userId);
+    } catch (error) {
+      if (error?.code === 'auth/user-not-found' || error?.code === 'auth/invalid-uid') {
+        console.warn('Cuenta no encontrada en Firebase Auth, pero se borraron los datos locales.', error?.code);
+      } else {
+        console.warn('No se pudo borrar la cuenta en Firebase Auth; se conservará la eliminación local.', error?.message || error);
+      }
+    }
+
+    res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+}
+
+app.delete('/profile', deleteAccountHandler);
+app.delete('/account', deleteAccountHandler);
 
 app.get('/profiles', async (req, res, next) => {
   try {

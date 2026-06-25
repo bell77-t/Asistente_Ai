@@ -5,6 +5,7 @@ import {
   createUserWithEmailAndPassword,
   getAuth,
   onAuthStateChanged,
+  sendEmailVerification,
   signInWithEmailAndPassword,
   signOut,
 } from 'firebase/auth';
@@ -40,6 +41,18 @@ export class AuthService {
     return this.currentUser || this.auth.currentUser || this.readyPromise;
   }
 
+  async waitForVerifiedUser() {
+    const user = await this.waitForAuth();
+
+    if (!user) {
+      return null;
+    }
+
+    await user.reload();
+    this.currentUser = this.auth.currentUser;
+    return this.currentUser?.emailVerified ? this.currentUser : null;
+  }
+
   async login(email: string, password: string) {
     if (!email || !password) {
       return Promise.reject(new Error('Email and password are required'));
@@ -47,6 +60,14 @@ export class AuthService {
 
     this.ensureConfigured();
     const credential = await signInWithEmailAndPassword(this.auth, email, password);
+
+    await credential.user.reload();
+    if (!credential.user.emailVerified) {
+      await sendEmailVerification(credential.user);
+      await this.logout();
+      throw new Error('EMAIL_NOT_VERIFIED');
+    }
+
     this.currentUser = credential.user;
     return credential.user;
   }
@@ -58,6 +79,7 @@ export class AuthService {
 
     this.ensureConfigured();
     const credential = await createUserWithEmailAndPassword(this.auth, email, password);
+    await sendEmailVerification(credential.user);
     this.currentUser = credential.user;
     return credential.user;
   }
