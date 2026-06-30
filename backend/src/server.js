@@ -7,7 +7,12 @@ const { admin, db } = require('./firebase');
 
 const app = express();
 
-
+const corsOptions = {
+  origin: 'http://localhost:3000', // Reemplaza esto con la URL real de tu frontend
+  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  credentials: true, 
+  optionsSuccessStatus: 200
+};
 app.use(cors(corsOptions));
 app.use(express.json());
 
