@@ -7,11 +7,6 @@ const { admin, db } = require('./firebase');
 
 const app = express();
 
-const corsOptions = {
-  origin: 'https://asistente-ai-ur0o.onrender.com',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // <-- ¡Esta es la coma que faltaba!
-  allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id']
-};
 
 app.use(cors(corsOptions));
 app.use(express.json());
@@ -108,6 +103,25 @@ function getUserId(req) {
 
 function sortByTimestampDesc(items, field = 'createdAt') {
   return items.sort((a, b) => timestampValue(b[field]) - timestampValue(a[field]));
+}
+
+function normalizeTaskDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+function isFutureOrTodayDate(value) {
+  if (!value) return true;
+  const normalized = normalizeTaskDate(value);
+  if (!normalized) return false;
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  return normalized >= today;
 }
 
 async function getUserDocs(collectionName, userId) {
@@ -429,14 +443,14 @@ async function generateGeminiAssistantResponse(content, profile, contextMessages
     .trim() || buildAssistantResponse(content, profile, contextMessages);
 }
 
-const allowedOrigins = [
-  'http://localhost:4200',
-  'http://localhost:3000',
-  'http://localhost:4201',
-  'https://asistente-ai-ur0o.onrender.com',
-  'https://asistente-ai-ur0o.onrender.com/',
-  'https://asistente-ai-ur0o.onrender.com/*',
-];
+  const allowedOrigins = [
+    'http://localhost:4200',
+    'http://localhost:3000',
+    'http://localhost:4201',
+    'https://asistente-ai-ur0o.onrender.com',
+    'https://asistente-ai-ur0o.onrender.com/',
+    'https://asistente-ai-ur0o.onrender.com/*',
+  ];
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -588,6 +602,12 @@ app.post('/tasks', async (req, res, next) => {
       return res.status(400).json({ error: 'title is required' });
     }
 
+    if (dueDate && !isFutureOrTodayDate(dueDate)) {
+      return res.status(400).json({
+        error: 'No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.',
+      });
+    }
+
     const docRef = await db.collection('tasks').add({
       title: title.trim(),
       description,
@@ -625,6 +645,12 @@ app.patch('/tasks/:id', async (req, res, next) => {
 
     if (!Object.keys(changes).length) {
       return res.status(400).json({ error: 'No valid task fields provided' });
+    }
+
+    if ('dueDate' in changes && changes.dueDate && !isFutureOrTodayDate(changes.dueDate)) {
+      return res.status(400).json({
+        error: 'No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.',
+      });
     }
 
     if (changes.status === 'completada') {

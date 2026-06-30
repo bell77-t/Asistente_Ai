@@ -81,7 +81,10 @@
           <div class="form-row">
             <label class="field" for="task-duedate">
               <span>Fecha limite</span>
-              <input id="task-duedate" type="date" formControlName="dueDate" />
+              <input id="task-duedate" type="date" formControlName="dueDate" [attr.min]="todayDate" />
+              <div class="field-error" *ngIf="taskForm.get('dueDate')?.hasError('pastDate') && taskForm.get('dueDate')?.touched">
+                No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.
+              </div>
             </label>
 
             <label class="field" for="task-duetime">

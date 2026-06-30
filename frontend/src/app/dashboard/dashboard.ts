@@ -1,6 +1,6 @@
 import { ChangeDetectorRef, Component, OnInit, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { ReactiveFormsModule, FormBuilder, Validators } from '@angular/forms';
+import { ReactiveFormsModule, FormBuilder, Validators, AbstractControl, ValidatorFn } from '@angular/forms';
 import { Router, RouterLink } from '@angular/router';
 import { ApiService, DashboardStats, TaskRecord, UserProfile } from '../services/api';
 import { AuthService } from '../services/auth';
@@ -27,17 +27,40 @@ export class Dashboard implements OnInit {
   loading = false;
   message = '';
 
+  todayDate = this.formatDate(new Date());
+
   // Formulario mejorado con todos los campos extendidos de la tarea
   taskForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
     description: [''],
     priority: ['media' as 'baja' | 'media' | 'alta', Validators.required],
     category: ['General', Validators.required],
-    dueDate: [''], 
-    dueTime: [''], 
+    dueDate: ['', [this.futureOrTodayDateValidator.bind(this)]],
+    dueTime: [''],
     status: ['pendiente' as 'pendiente' | 'en_progreso' | 'completada', Validators.required],
-    notes: ['']    
+    notes: [''],
   });
+
+  private futureOrTodayDateValidator(control: AbstractControl) {
+    const value = control.value;
+    if (!value) return null;
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return { pastDate: true };
+
+    const selected = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    return selected < today ? { pastDate: true } : null;
+  }
+
+  private formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
 
   ngOnInit() {
     this.refreshDashboard();
@@ -79,6 +102,12 @@ export class Dashboard implements OnInit {
   }
 
   saveTask() {
+    if (this.taskForm.get('dueDate')?.invalid) {
+      this.message = 'No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.';
+      this.cdr.detectChanges();
+      return;
+    }
+
     if (this.taskForm.invalid) {
       this.message = 'Por favor, rellena los campos obligatorios correctamente.';
       this.cdr.detectChanges();
