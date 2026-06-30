@@ -120,6 +120,16 @@ console.log('====================');
   }
 }
 
+db.listCollections()
+  .then(cols => {
+    console.log("✅ Firestore conectado.");
+    console.log("Colecciones:", cols.map(c => c.id));
+  })
+  .catch(err => {
+    console.error("❌ Error conectando a Firestore:");
+    console.error(err);
+  });
+
 const db = admin.firestore();
 
 module.exports = {
