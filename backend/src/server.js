@@ -7,8 +7,13 @@ const { admin, db } = require('./firebase');
 
 const app = express();
 
+// Actualiza tu configuración de CORS para que se vea así:
 const corsOptions = {
-  origin: 'http://localhost:3000', // Reemplaza esto con la URL real de tu frontend
+  // Permite tanto tu entorno local como tu URL de producción en Render
+  origin: [
+    'http://localhost:3000', 
+    'https://asistente-ai-ur0o.onrender.com'
+  ],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true, 
   optionsSuccessStatus: 200
