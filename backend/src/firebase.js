@@ -120,6 +120,8 @@ console.log('====================');
   }
 }
 
+const db = admin.firestore();
+
 db.listCollections()
   .then(cols => {
     console.log("✅ Firestore conectado.");
@@ -129,8 +131,6 @@ db.listCollections()
     console.error("❌ Error conectando a Firestore:");
     console.error(err);
   });
-
-const db = admin.firestore();
 
 module.exports = {
   admin,
