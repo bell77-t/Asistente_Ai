@@ -91,6 +91,16 @@ if (!admin.apps.length) {
         // DEBUG SEGURO: Verificamos el formato sin exponer toda tu clave secreta
       }
 
+console.log('====================');
+console.log('Project:', serviceAccount.project_id);
+console.log('Client:', serviceAccount.client_email);
+console.log(
+  'Private key OK:',
+  serviceAccount.private_key?.startsWith('-----BEGIN PRIVATE KEY-----')
+);
+console.log('====================');
+
+
       admin.initializeApp({
         credential: admin.credential.cert(serviceAccount),
       });
