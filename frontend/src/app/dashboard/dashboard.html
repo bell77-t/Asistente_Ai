@@ -54,57 +54,80 @@
         <form [formGroup]="taskForm" (ngSubmit)="saveTask()">
           <label class="field" for="task-title">
             <span>Titulo</span>
-            <input id="task-title" formControlName="title" placeholder="Ej. Entregar evidencia del aplicativo" />
+            <input id="task-title" formControlName="title" placeholder="Ej. Entregar evidencia del aplicativo" required />
+            <div class="field-error" *ngIf="taskForm.get('title')?.invalid && taskForm.get('title')?.touched">
+              <span *ngIf="taskForm.get('title')?.hasError('required')">Debes ingresar un título.</span>
+              <span *ngIf="taskForm.get('title')?.hasError('minlength')">El título debe tener al menos 3 caracteres.</span>
+            </div>
           </label>
 
           <label class="field" for="task-desc">
             <span>Descripcion</span>
-            <textarea id="task-desc" formControlName="description" placeholder="Resumen, objetivo o pasos principales"></textarea>
+            <textarea id="task-desc" formControlName="description" placeholder="Resumen, objetivo o pasos principales" required></textarea>
+            <div class="field-error" *ngIf="taskForm.get('description')?.invalid && taskForm.get('description')?.touched">
+              Debes ingresar una descripción.
+            </div>
           </label>
 
           <div class="form-row">
             <label class="field" for="task-category">
               <span>Categoria</span>
-              <input id="task-category" formControlName="category" placeholder="Trabajo, Estudio, Personal" />
+              <input id="task-category" formControlName="category" placeholder="Trabajo, Estudio, Personal" required />
+              <div class="field-error" *ngIf="taskForm.get('category')?.invalid && taskForm.get('category')?.touched">
+                Debes ingresar una categoría.
+              </div>
             </label>
 
             <label class="field" for="task-priority">
               <span>Prioridad</span>
-              <select id="task-priority" formControlName="priority">
+              <select id="task-priority" formControlName="priority" required>
                 <option value="baja">Baja</option>
                 <option value="media">Media</option>
                 <option value="alta">Alta</option>
               </select>
+              <div class="field-error" *ngIf="taskForm.get('priority')?.invalid && taskForm.get('priority')?.touched">
+                Debes seleccionar una prioridad.
+              </div>
             </label>
           </div>
 
           <div class="form-row">
             <label class="field" for="task-duedate">
               <span>Fecha limite</span>
-              <input id="task-duedate" type="date" formControlName="dueDate" [attr.min]="todayDate" />
-              <div class="field-error" *ngIf="taskForm.get('dueDate')?.hasError('pastDate') && taskForm.get('dueDate')?.touched">
-                No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.
+              <input id="task-duedate" type="date" formControlName="dueDate" [attr.min]="todayDate" required />
+              <div class="field-error" *ngIf="taskForm.get('dueDate')?.invalid && taskForm.get('dueDate')?.touched">
+                <span *ngIf="taskForm.get('dueDate')?.hasError('required')">Debes seleccionar una fecha límite.</span>
+                <span *ngIf="taskForm.get('dueDate')?.hasError('pastDate')">No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.</span>
               </div>
             </label>
 
             <label class="field" for="task-duetime">
               <span>Hora</span>
-              <input id="task-duetime" type="time" formControlName="dueTime" />
+              <input id="task-duetime" type="time" formControlName="dueTime" required />
+              <div class="field-error" *ngIf="taskForm.get('dueTime')?.invalid && taskForm.get('dueTime')?.touched">
+                Debes seleccionar una hora.
+              </div>
             </label>
           </div>
 
           <label class="field" for="task-status">
             <span>Estado</span>
-            <select id="task-status" formControlName="status">
+            <select id="task-status" formControlName="status" required>
               <option value="pendiente">Pendiente</option>
               <option value="en_progreso">En progreso</option>
               <option value="completada">Completada</option>
             </select>
+            <div class="field-error" *ngIf="taskForm.get('status')?.invalid && taskForm.get('status')?.touched">
+              Debes seleccionar un estado.
+            </div>
           </label>
 
           <label class="field" for="task-notes">
             <span>Notas</span>
-            <textarea id="task-notes" formControlName="notes" rows="2" placeholder="Enlaces, bloqueos u observaciones"></textarea>
+            <textarea id="task-notes" formControlName="notes" rows="2" placeholder="Enlaces, bloqueos u observaciones" required></textarea>
+            <div class="field-error" *ngIf="taskForm.get('notes')?.invalid && taskForm.get('notes')?.touched">
+              Debes ingresar notas.
+            </div>
           </label>
 
           <div class="form-actions">

@@ -182,6 +182,19 @@ form {
   margin-top: 18px;
 }
 
+.field-error {
+  color: #ff9e9e;
+  font-size: 13px;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+.field input:invalid,
+.field textarea:invalid,
+.field select:invalid {
+  border-color: #ff9e9e;
+}
+
 .form-row {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

@@ -32,13 +32,13 @@ export class Dashboard implements OnInit {
   // Formulario mejorado con todos los campos extendidos de la tarea
   taskForm = this.fb.nonNullable.group({
     title: ['', [Validators.required, Validators.minLength(3)]],
-    description: [''],
+    description: ['', Validators.required],
     priority: ['media' as 'baja' | 'media' | 'alta', Validators.required],
     category: ['General', Validators.required],
-    dueDate: ['', [this.futureOrTodayDateValidator.bind(this)]],
-    dueTime: [''],
+    dueDate: ['', [Validators.required, this.futureOrTodayDateValidator.bind(this)]],
+    dueTime: ['', Validators.required],
     status: ['pendiente' as 'pendiente' | 'en_progreso' | 'completada', Validators.required],
-    notes: [''],
+    notes: ['', Validators.required],
   });
 
   private futureOrTodayDateValidator(control: AbstractControl) {
@@ -102,14 +102,14 @@ export class Dashboard implements OnInit {
   }
 
   saveTask() {
-    if (this.taskForm.get('dueDate')?.invalid) {
-      this.message = 'No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.';
-      this.cdr.detectChanges();
-      return;
-    }
-
     if (this.taskForm.invalid) {
-      this.message = 'Por favor, rellena los campos obligatorios correctamente.';
+      this.taskForm.markAllAsTouched();
+
+      if (this.taskForm.get('dueDate')?.hasError('pastDate')) {
+        this.message = 'No se permiten fechas anteriores al día de hoy. Seleccione una fecha válida.';
+      } else {
+        this.message = 'Por favor, rellena los campos obligatorios correctamente.';
+      }
       this.cdr.detectChanges();
       return;
     }
